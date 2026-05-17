@@ -2,15 +2,13 @@ package com.tony.kingdetective.controller;
 
 import com.tony.kingdetective.bean.ResponseData;
 import com.tony.kingdetective.utils.CommonUtils;
+import com.tony.kingdetective.utils.VersionUpdateUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -33,12 +31,7 @@ public class SystemController {
     @PostMapping("/trigger-update")
     public ResponseData<String> triggerUpdate() {
         try {
-            File flagFile = new File("/app/king-detective/runtime/update_version_trigger.flag");
-            File parentDir = flagFile.getParentFile();
-            if (parentDir != null && !parentDir.exists()) {
-                parentDir.mkdirs();
-            }
-            Files.write(flagFile.toPath(), "trigger\n".getBytes(StandardCharsets.UTF_8));
+            VersionUpdateUtils.triggerUpdate();
             log.info("触发自动更新，timestamp: {}", System.currentTimeMillis());
             return ResponseData.successData("更新触发成功，系统将在几分钟内自动更新并重启");
         } catch (Exception e) {
@@ -56,10 +49,15 @@ public class SystemController {
     }
 
     @GetMapping("/version-info")
-    public ResponseData<Map<String, String>> getVersionInfo() {
-        Map<String, String> versionInfo = new LinkedHashMap<>();
-        versionInfo.put("currentVersion", CommonUtils.getCurrentVersion());
-        versionInfo.put("latestVersion", CommonUtils.getLatestVersion());
+    public ResponseData<Map<String, Object>> getVersionInfo() {
+        String currentVersion = CommonUtils.getCurrentVersion();
+        String latestVersion = CommonUtils.getLatestVersion();
+        Map<String, Object> versionInfo = new LinkedHashMap<>();
+        versionInfo.put("currentVersion", currentVersion);
+        versionInfo.put("latestVersion", latestVersion);
+        versionInfo.put("updateAvailable", VersionUpdateUtils.hasNewVersion(currentVersion, latestVersion));
+        versionInfo.put("triggerFile", VersionUpdateUtils.TRIGGER_FILE_PATH);
+        versionInfo.put("checkedAt", System.currentTimeMillis());
         return ResponseData.successData(versionInfo);
     }
 }

@@ -269,10 +269,7 @@ public class OciTask implements ApplicationRunner {
             if (StrUtil.isNotBlank(now) && !now.equals(latest)) {
                 log.warn(String.format("【king-detective】版本更新啦！！！当前版本：%s 最新版本：%s", now, latest));
                 if (!isPushedLatestVersion) {
-                    sysService.sendMessage(String.format("🔔【king-detective】版本更新啦！！！\n\n当前版本：%s\n最新版本：%s\n一键脚本：%s\n\n更新内容：\n%s",
-                            now, latest,
-                            "bash <(wget -qO- https://github.com/tony-wang1990/king-detective/releases/latest/download/sh_king-detective_install.sh)",
-                            CommonUtils.getLatestVersionBody()));
+                    sysService.sendVersionUpdateMessage(now, latest, CommonUtils.getLatestVersionBody());
                     isPushedLatestVersion = true;
                 }
             }

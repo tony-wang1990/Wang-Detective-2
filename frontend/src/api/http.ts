@@ -127,6 +127,14 @@ export async function opsPost<T>(url: string, body: unknown): Promise<ApiEnvelop
   return parseResponse<ApiEnvelope<T>>(response, url);
 }
 
+export async function opsDelete<T>(url: string): Promise<ApiEnvelope<T>> {
+  const response = await fetch(`/api/ops${url}`, {
+    method: 'DELETE',
+    headers: authHeaders()
+  });
+  return parseResponse<ApiEnvelope<T>>(response, url);
+}
+
 export async function opsDownload(url: string, body: unknown): Promise<{ blob: Blob; filename?: string }> {
   const response = await fetch(`/api/ops${url}`, {
     method: 'POST',

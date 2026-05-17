@@ -10,6 +10,7 @@ import {
   Menu,
   Moon,
   ExternalLink,
+  RefreshCw,
   Search,
   ServerCog,
   ShieldCheck,
@@ -19,7 +20,14 @@ import {
   UserRound
 } from 'lucide-vue-next';
 import { useTheme } from '../composables/useTheme';
-import { getHealth } from '../api/http';
+import { apiGet, apiPost, getHealth } from '../api/http';
+
+type VersionInfo = {
+  currentVersion?: string;
+  latestVersion?: string;
+  updateAvailable?: boolean;
+  checkedAt?: number;
+};
 
 const router = useRouter();
 const route = useRoute();
@@ -27,7 +35,12 @@ const { theme, toggleTheme } = useTheme();
 const host = window.location.host;
 const healthStatus = ref('检查中');
 const version = ref(localStorage.getItem('currentVersion') || 'main');
+const latestVersion = ref(localStorage.getItem('latestVersion') || '');
+const updateAvailable = ref(false);
+const versionStatus = ref('');
+const updatingVersion = ref(false);
 let healthTimer: number | undefined;
+let versionTimer: number | undefined;
 
 const navItems = [
   { label: '主页', path: '/dashboard/home', icon: Home, match: ['/dashboard', '/dashboard/home'] },
@@ -66,14 +79,56 @@ async function refreshTopStatus() {
   }
 }
 
+async function refreshVersionInfo() {
+  try {
+    const res = await apiGet<VersionInfo>('/v1/system/version-info');
+    const info = res.data || {};
+    if (info.currentVersion) {
+      version.value = info.currentVersion;
+      localStorage.setItem('currentVersion', info.currentVersion);
+    }
+    if (info.latestVersion) {
+      latestVersion.value = info.latestVersion;
+      localStorage.setItem('latestVersion', info.latestVersion);
+    }
+    updateAvailable.value = Boolean(info.updateAvailable ?? (
+      info.latestVersion && info.currentVersion && info.latestVersion !== info.currentVersion
+    ));
+    versionStatus.value = updateAvailable.value ? '发现新版本，可点击更新' : '已是最新版本';
+  } catch (error) {
+    versionStatus.value = error instanceof Error ? error.message : '版本检测失败';
+  }
+}
+
+async function triggerVersionUpdate() {
+  if (!updateAvailable.value && !window.confirm('当前没有检测到新版本，仍然触发更新吗？')) {
+    return;
+  }
+  updatingVersion.value = true;
+  versionStatus.value = '正在触发更新...';
+  try {
+    const res = await apiPost<string>('/v1/system/trigger-update', {});
+    versionStatus.value = res.msg || res.data || '已触发更新，watcher 将自动拉取并重启服务';
+  } catch (error) {
+    versionStatus.value = error instanceof Error ? error.message : '触发更新失败';
+  } finally {
+    updatingVersion.value = false;
+  }
+}
+
 onMounted(() => {
   refreshTopStatus();
+  refreshVersionInfo();
   healthTimer = window.setInterval(refreshTopStatus, 60000);
+  versionTimer = window.setInterval(refreshVersionInfo, 300000);
 });
 
 onBeforeUnmount(() => {
   if (healthTimer) {
     window.clearInterval(healthTimer);
+  }
+  if (versionTimer) {
+    window.clearInterval(versionTimer);
   }
 });
 </script>
@@ -122,6 +177,17 @@ onBeforeUnmount(() => {
           系统健康 <b :class="healthClass">{{ healthStatus }}</b>
         </div>
         <div class="wd-version">版本 <b>{{ currentVersion }}</b></div>
+        <button
+          type="button"
+          class="wd-update"
+          :class="{ available: updateAvailable }"
+          :disabled="updatingVersion"
+          :title="versionStatus"
+          @click="updateAvailable ? triggerVersionUpdate() : refreshVersionInfo()"
+        >
+          <RefreshCw :size="16" :class="{ spinning: updatingVersion }" />
+          {{ updateAvailable ? `更新 ${latestVersion || ''}` : '检查更新' }}
+        </button>
         <button type="button" class="wd-theme" @click="toggleTheme">
           <Sun v-if="theme === 'dark'" :size="16" />
           <Moon v-else :size="16" />

@@ -100,11 +100,22 @@ public class OpsSshController {
         int ttlMinutes = params.getTtlMinutes() == null ? 15 : params.getTtlMinutes();
         WebSshSessionRegistry.Entry entry = sessionRegistry.create(credential, ttlMinutes);
         auditSuccess("OPS_SSH_SESSION_CREATE", target(credential), "ttlMinutes=" + ttlMinutes);
-        return ResponseData.successData(SshSessionRsp.builder()
-                .sessionId(entry.sessionId())
-                .expiresAt(entry.expiresAt())
-                .websocketPath("/ops/ssh/terminal/" + entry.sessionId())
-                .build());
+        return ResponseData.successData(toSessionRsp(entry));
+    }
+
+    @GetMapping("/ssh/sessions")
+    public ResponseData<List<SshSessionRsp>> sessions() {
+        return ResponseData.successData(sessionRegistry.list().stream()
+                .map(this::toSessionRsp)
+                .toList());
+    }
+
+    @DeleteMapping("/ssh/sessions/{sessionId}")
+    public ResponseData<Void> deleteSession(@PathVariable("sessionId") String sessionId) {
+        WebSshSessionRegistry.Entry entry = sessionRegistry.get(sessionId);
+        sessionRegistry.remove(sessionId);
+        auditSuccess("OPS_SSH_SESSION_DELETE", sessionId, entry == null ? null : target(entry.credential()));
+        return ResponseData.successData("Session deleted");
     }
 
     @PostMapping("/ssh/test")
@@ -220,6 +231,21 @@ public class OpsSshController {
 
     private void auditSuccess(String operation, String target, String details) {
         auditLogService.logSuccess(null, operation, target, trim(details));
+    }
+
+    private SshSessionRsp toSessionRsp(WebSshSessionRegistry.Entry entry) {
+        SshCredentialParams credential = entry.credential();
+        return SshSessionRsp.builder()
+                .sessionId(entry.sessionId())
+                .host(credential.getHost())
+                .port(credential.getPort())
+                .username(credential.getUsername())
+                .createdAt(entry.createdAt())
+                .lastConnectedAt(entry.lastConnectedAt())
+                .connectCount(entry.connectCount())
+                .expiresAt(entry.expiresAt())
+                .websocketPath("/ops/ssh/terminal/" + entry.sessionId())
+                .build();
     }
 
     private String target(SshCredentialParams credential) {

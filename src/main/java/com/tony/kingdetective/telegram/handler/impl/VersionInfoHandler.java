@@ -1,5 +1,6 @@
 package com.tony.kingdetective.telegram.handler.impl;
 
+import com.tony.kingdetective.utils.VersionUpdateUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
@@ -9,19 +10,20 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import java.io.IOException;
 import java.io.Serializable;
 
 import static java.lang.Math.toIntExact;
 
 /**
  * 版本信息回调处理器
- * 
+ *
  * @author yohann
  */
 @Slf4j
 @Component
 public class VersionInfoHandler extends VersionInfoBaseHandler {
-    
+
     @Override
     public BotApiMethod<? extends Serializable> handle(CallbackQuery callbackQuery, TelegramClient telegramClient) {
         try {
@@ -35,7 +37,7 @@ public class VersionInfoHandler extends VersionInfoBaseHandler {
             return buildEditMessage(callbackQuery, "获取版本信息失败");
         }
     }
-    
+
     @Override
     public String getCallbackPattern() {
         return "version_info";
@@ -44,81 +46,55 @@ public class VersionInfoHandler extends VersionInfoBaseHandler {
 
 /**
  * 更新系统版本回调处理器
- * 
+ *
  * @author yohann
  */
 @Slf4j
 @Component
 class UpdateSysVersionHandler extends VersionInfoBaseHandler {
-    
-    
+
     @Override
     public BotApiMethod<? extends Serializable> handle(CallbackQuery callbackQuery, TelegramClient telegramClient) {
         long chatId = callbackQuery.getMessage().getChatId();
         long messageId = callbackQuery.getMessage().getMessageId();
-        
+
         try {
-            // 使用Java NIO创建trigger文件，更加可靠
-            java.io.File triggerFile = new java.io.File("/app/king-detective/update_version_trigger.flag");
-            
-            // 如果文件存在且是目录，删除该目录
-            if (triggerFile.exists() && triggerFile.isDirectory()) {
-                log.warn("Trigger文件被错误地创建为目录，正在修复...");
-                org.apache.commons.io.FileUtils.deleteDirectory(triggerFile);
-            }
-            
-            // 确保父目录存在
-            java.io.File parentDir = triggerFile.getParentFile();
-            if (!parentDir.exists()) {
-                parentDir.mkdirs();
-            }
-            
-            // 写入trigger内容
-            java.nio.file.Files.write(
-                triggerFile.toPath(), 
-                "trigger".getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                java.nio.file.StandardOpenOption.CREATE,
-                java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
-            );
-            
-            log.info("✅ 成功创建更新触发器: {}", triggerFile.getAbsolutePath());
-            
-            // 删除原消息
+            VersionUpdateUtils.triggerUpdate();
+            log.info("Created update trigger file: {}", VersionUpdateUtils.TRIGGER_FILE_PATH);
+
             telegramClient.execute(DeleteMessage.builder()
                     .chatId(chatId)
                     .messageId(toIntExact(messageId))
                     .build());
-            
-            // 发送更新提示
+
             return SendMessage.builder()
                     .chatId(chatId)
-                    .text("🔄 正在更新 king-detective 最新版本，请稍后...\n\n" +
-                          "💡 更新过程约2-3分钟\n" +
-                          "📋 可通过以下命令查看进度：\n" +
-                          "<code>docker logs -f king-detective-watcher</code>")
+                    .text("🔄 已触发 W-探长自动更新。\n\n" +
+                            "更新过程通常需要 1-3 分钟，完成后容器会自动重启。\n" +
+                            "可通过以下命令查看 watcher 进度：\n" +
+                            "<code>docker logs -f king-detective-watcher</code>")
                     .parseMode("HTML")
                     .build();
-                    
-        } catch (java.io.IOException e) {
-            log.error("创建trigger文件失败", e);
+        } catch (IOException e) {
+            log.error("Create update trigger file failed", e);
             try {
                 telegramClient.execute(DeleteMessage.builder()
                         .chatId(chatId)
                         .messageId(toIntExact(messageId))
                         .build());
             } catch (TelegramApiException ex) {
-                log.error("删除消息失败", ex);
+                log.error("Delete version update message failed", ex);
             }
             return SendMessage.builder()
                     .chatId(chatId)
-                    .text("❌ 触发更新失败: " + e.getMessage() + "\n\n请检查容器权限或手动更新")
+                    .text("❌ 触发更新失败: " + e.getMessage() + "\n\n请检查容器权限或稍后在 Web 控制台重试。")
                     .build();
         } catch (TelegramApiException e) {
             log.error("TG Bot error", e);
             return null;
         }
     }
-    
+
     @Override
     public String getCallbackPattern() {
         return "update_sys_version";

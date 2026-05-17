@@ -10,6 +10,8 @@ public interface ISysService {
 
     void sendMessage(String message);
 
+    void sendVersionUpdateMessage(String currentVersion, String latestVersion, String releaseNotes);
+
     LoginRsp login(LoginParams params);
 
     void updateSysCfg(UpdateSysCfgParams params);

@@ -7,7 +7,6 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.core.util.RuntimeUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
@@ -51,6 +50,7 @@ import com.tony.kingdetective.telegram.TgBot;
 import com.tony.kingdetective.utils.CommonUtils;
 import com.tony.kingdetective.utils.CustomExpiryGuavaCache;
 import com.tony.kingdetective.utils.MessageServiceFactory;
+import com.tony.kingdetective.utils.VersionUpdateUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -126,6 +126,25 @@ public class SysServiceImpl implements ISysService {
     public void sendMessage(String message) {
         virtualExecutor.execute(() -> messageServiceFactory.getMessageService(MessageTypeEnum.MSG_TYPE_DING_DING).sendMessage(message));
         virtualExecutor.execute(() -> messageServiceFactory.getMessageService(MessageTypeEnum.MSG_TYPE_TELEGRAM).sendMessage(message));
+    }
+
+    @Override
+    public void sendVersionUpdateMessage(String currentVersion, String latestVersion, String releaseNotes) {
+        String message = String.format("🔔【W-探长】检测到新版本\n\n当前版本：%s\n最新版本：%s\n\n更新内容：\n%s",
+                currentVersion,
+                latestVersion,
+                StrUtil.blankToDefault(releaseNotes, "暂无更新说明"));
+        virtualExecutor.execute(() -> messageServiceFactory.getMessageService(MessageTypeEnum.MSG_TYPE_DING_DING).sendMessage(
+                message + "\n\n请在 Web 控制台或 Telegram Bot 的版本信息菜单点击更新。"
+        ));
+        virtualExecutor.execute(() -> {
+            IMessageService messageService = messageServiceFactory.getMessageService(MessageTypeEnum.MSG_TYPE_TELEGRAM);
+            if (messageService instanceof TgMessageServiceImpl tgMessageService) {
+                tgMessageService.sendVersionUpdateMessage(message);
+            } else {
+                messageService.sendMessage(message);
+            }
+        });
     }
 
     @Override
@@ -756,20 +775,11 @@ public class SysServiceImpl implements ISysService {
         if (latestVersion.equals(currentVersion)) {
             throw new OciException(-1, "当前已是最新版本，请返回主页并刷新页面查看");
         }
-        List<String> command = List.of("/bin/sh", "-c", "echo trigger > /app/king-detective/update_version_trigger.flag");
-        Process process = RuntimeUtil.exec(command.toArray(new String[0]));
-
-        int exitCode = 0;
         try {
-            exitCode = process.waitFor();
-        } catch (InterruptedException e) {
-            log.error("TG Bot error", e);
-        }
-
-        if (exitCode == 0) {
+            VersionUpdateUtils.triggerUpdate();
             log.info("Start the version update task...");
-        } else {
-            log.error("version update task exec error,exitCode:{}", exitCode);
+        } catch (IOException e) {
+            throw new OciException(-1, "触发更新失败: " + e.getMessage());
         }
     }
 

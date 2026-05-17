@@ -28,6 +28,7 @@ import java.util.concurrent.Future;
 @Slf4j
 @Component
 public class SshTerminalWebSocketHandler extends TextWebSocketHandler {
+    private static final String RESIZE_PREFIX = "__KD_RESIZE__:";
     private final WebSshService webSshService;
     private final WebSshSessionRegistry sessionRegistry;
     private final Map<String, TerminalSession> sessions = new ConcurrentHashMap<>();
@@ -55,6 +56,7 @@ public class SshTerminalWebSocketHandler extends TextWebSocketHandler {
             webSocketSession.close(CloseStatus.POLICY_VIOLATION.withReason("SSH session expired"));
             return;
         }
+        sessionRegistry.touchConnected(sessionId);
 
         Session sshSession = webSshService.openSession(credential);
         ChannelShell shell = (ChannelShell) sshSession.openChannel("shell");
@@ -79,7 +81,12 @@ public class SshTerminalWebSocketHandler extends TextWebSocketHandler {
             webSocketSession.close(CloseStatus.SERVER_ERROR.withReason("SSH shell is closed"));
             return;
         }
-        terminalSession.remoteInput().write(message.getPayload().getBytes(StandardCharsets.UTF_8));
+        String payload = message.getPayload();
+        if (payload != null && payload.startsWith(RESIZE_PREFIX)) {
+            resizeTerminal(terminalSession.shell(), payload);
+            return;
+        }
+        terminalSession.remoteInput().write(payload.getBytes(StandardCharsets.UTF_8));
         terminalSession.remoteInput().flush();
     }
 
@@ -141,6 +148,20 @@ public class SshTerminalWebSocketHandler extends TextWebSocketHandler {
             } catch (Exception e) {
                 log.warn("Failed to send SSH terminal output: {}", e.getMessage());
             }
+        }
+    }
+
+    private void resizeTerminal(ChannelShell shell, String payload) {
+        String[] parts = payload.substring(RESIZE_PREFIX.length()).split(":");
+        if (parts.length < 2) {
+            return;
+        }
+        try {
+            int cols = Math.max(40, Math.min(Integer.parseInt(parts[0]), 240));
+            int rows = Math.max(10, Math.min(Integer.parseInt(parts[1]), 80));
+            shell.setPtySize(cols, rows, cols * 8, rows * 16);
+        } catch (Exception e) {
+            log.debug("Ignore invalid SSH terminal resize payload: {}", payload);
         }
     }
 

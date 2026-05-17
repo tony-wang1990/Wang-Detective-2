@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { Download, FilePenLine, FolderPlus, FolderOpen, ListChecks, Play, RefreshCw, Save, Server, Square, Terminal, Trash2, Upload, Wifi, Zap } from 'lucide-vue-next';
-import { opsDownload, opsGet, opsPost, opsUpload } from '../api/http';
+import { opsDelete, opsDownload, opsGet, opsPost, opsUpload } from '../api/http';
 
 type Host = {
   id?: string;
@@ -11,6 +11,18 @@ type Host = {
   username?: string;
   authType?: string;
   tags?: string;
+};
+
+type SshSession = {
+  sessionId?: string;
+  host?: string;
+  port?: number;
+  username?: string;
+  createdAt?: number;
+  lastConnectedAt?: number;
+  connectCount?: number;
+  expiresAt?: number;
+  websocketPath?: string;
 };
 
 type CommandResult = {
@@ -39,6 +51,11 @@ const terminalOutput = ref('尚未连接。选择主机后点击 Web SSH，可�
 const terminalInput = ref('');
 const terminalStatus = ref('未连接');
 const terminalRef = ref<HTMLElement | null>(null);
+const sshSessions = ref<SshSession[]>([]);
+const currentSessionId = ref('');
+const currentWebsocketPath = ref('');
+const terminalCols = ref(120);
+const terminalRows = ref(32);
 const command = ref('uname -a && uptime');
 const commandHistory = ref<string[]>([]);
 const sftpPath = ref('.');
@@ -63,6 +80,7 @@ const form = reactive({
   passphrase: ''
 });
 let terminalWs: WebSocket | null = null;
+let resizeTimer: number | undefined;
 
 const commandTemplates = [
   { label: '系统概览', value: 'uname -a && uptime && free -h && df -h' },
@@ -72,6 +90,7 @@ const commandTemplates = [
 ];
 
 const currentHost = computed(() => hosts.value.find((host) => host.id === selectedHostId.value));
+const terminalConnected = ref(false);
 
 function credential() {
   if (selectedHostId.value) {
@@ -100,6 +119,17 @@ function formatBytes(bytes?: number) {
     index += 1;
   }
   return `${value.toFixed(index ? 1 : 0)} ${units[index]}`;
+}
+
+function formatTime(timestamp?: number) {
+  if (!timestamp) {
+    return '-';
+  }
+  return new Date(timestamp).toLocaleString();
+}
+
+function sessionTarget(session: SshSession) {
+  return `${session.username || '-'}@${session.host || '-'}:${session.port || 22}`;
 }
 
 function joinRemotePath(parent: string, child: string) {
@@ -158,6 +188,15 @@ async function loadHosts() {
   try {
     const res = await opsGet<Host[]>('/ssh/hosts');
     hosts.value = res.data || [];
+  } catch (error) {
+    status.value = errorMessage(error);
+  }
+}
+
+async function loadSessions() {
+  try {
+    const res = await opsGet<SshSession[]>('/ssh/sessions');
+    sshSessions.value = res.data || [];
   } catch (error) {
     status.value = errorMessage(error);
   }
@@ -222,21 +261,90 @@ function appendTerminal(text: string) {
   });
 }
 
-function disconnectTerminal() {
+function closeTerminalSocket() {
   if (terminalWs) {
     terminalWs.close();
     terminalWs = null;
   }
+  terminalConnected.value = false;
+}
+
+function disconnectTerminal() {
+  closeTerminalSocket();
   terminalStatus.value = '已断开';
 }
 
+function terminalUrl(websocketPath: string) {
+  const token = sessionStorage.getItem('token') || '';
+  const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${scheme}//${window.location.host}${websocketPath}?token=${encodeURIComponent(token)}`;
+}
+
+function sendTerminalResize() {
+  if (!terminalWs || terminalWs.readyState !== WebSocket.OPEN) {
+    return;
+  }
+  terminalWs.send(`__KD_RESIZE__:${terminalCols.value}:${terminalRows.value}`);
+}
+
+function autoResizeTerminal() {
+  if (!terminalRef.value) {
+    sendTerminalResize();
+    return;
+  }
+  const rect = terminalRef.value.getBoundingClientRect();
+  terminalCols.value = Math.max(80, Math.min(220, Math.floor((rect.width - 28) / 8)));
+  terminalRows.value = Math.max(18, Math.min(60, Math.floor((rect.height - 28) / 18)));
+  sendTerminalResize();
+}
+
+function scheduleAutoResize() {
+  if (resizeTimer) {
+    window.clearTimeout(resizeTimer);
+  }
+  resizeTimer = window.setTimeout(autoResizeTerminal, 160);
+}
+
+function connectTerminal(websocketPath: string, clearOutput = false) {
+  closeTerminalSocket();
+  currentWebsocketPath.value = websocketPath;
+  terminalStatus.value = '连接中';
+  if (clearOutput) {
+    terminalOutput.value = '正在连接 SSH 会话...\n';
+  } else {
+    appendTerminal('\n[本地] 正在重连 SSH 会话...\n');
+  }
+  const ws = new WebSocket(terminalUrl(websocketPath));
+  terminalWs = ws;
+  ws.onopen = () => {
+    terminalConnected.value = true;
+    terminalStatus.value = '已连接';
+    status.value = 'Web SSH 已连接';
+    nextTick(autoResizeTerminal);
+    loadSessions();
+  };
+  ws.onmessage = (event) => appendTerminal(String(event.data || ''));
+  ws.onerror = () => {
+    terminalStatus.value = '连接错误';
+    status.value = 'Web SSH 连接错误';
+  };
+  ws.onclose = () => {
+    if (terminalWs === ws) {
+      terminalWs = null;
+      terminalConnected.value = false;
+      terminalStatus.value = '已断开，可重连';
+      loadSessions();
+    }
+  };
+}
+
 async function createSession() {
-  disconnectTerminal();
+  closeTerminalSocket();
   status.value = '创建 Web SSH 会话中';
   terminalStatus.value = '连接中';
   terminalOutput.value = '正在创建 SSH 会话...\n';
   try {
-    const res = await opsPost<{ websocketPath?: string; sessionId?: string }>('/ssh/session', {
+    const res = await opsPost<SshSession>('/ssh/session', {
       credential: credential(),
       ttlMinutes: 30
     });
@@ -247,27 +355,43 @@ async function createSession() {
       appendTerminal('后端没有返回 WebSocket 地址。\n');
       return;
     }
-    const token = sessionStorage.getItem('token') || '';
-    const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${scheme}//${window.location.host}${websocketPath}?token=${encodeURIComponent(token)}`;
-    terminalWs = new WebSocket(url);
-    terminalWs.onopen = () => {
-      terminalStatus.value = '已连接';
-      status.value = 'Web SSH 已连接';
-    };
-    terminalWs.onmessage = (event) => appendTerminal(String(event.data || ''));
-    terminalWs.onerror = () => {
-      terminalStatus.value = '连接错误';
-      status.value = 'Web SSH 连接错误';
-    };
-    terminalWs.onclose = () => {
-      terminalWs = null;
-      terminalStatus.value = '已断开';
-    };
+    currentSessionId.value = res.data?.sessionId || '';
+    currentWebsocketPath.value = websocketPath;
+    await loadSessions();
+    connectTerminal(websocketPath, true);
   } catch (error) {
     terminalStatus.value = '连接失败';
     status.value = 'Web SSH 连接失败';
     appendTerminal(`[本地] ${errorMessage(error)}\n`);
+  }
+}
+
+function reconnectSession(session?: SshSession) {
+  const targetSession = session || sshSessions.value.find((item) => item.sessionId === currentSessionId.value);
+  const websocketPath = targetSession?.websocketPath || currentWebsocketPath.value;
+  if (!websocketPath) {
+    appendTerminal('\n[本地] 没有可重连的 Web SSH 会话，请先创建会话。\n');
+    return;
+  }
+  currentSessionId.value = targetSession?.sessionId || currentSessionId.value;
+  connectTerminal(websocketPath, false);
+}
+
+async function deleteSession(session: SshSession) {
+  if (!session.sessionId) {
+    return;
+  }
+  try {
+    await opsDelete(`/ssh/sessions/${session.sessionId}`);
+    if (currentSessionId.value === session.sessionId) {
+      disconnectTerminal();
+      currentSessionId.value = '';
+      currentWebsocketPath.value = '';
+    }
+    await loadSessions();
+    status.value = 'Web SSH 会话已删除';
+  } catch (error) {
+    status.value = errorMessage(error);
   }
 }
 
@@ -462,9 +586,17 @@ async function renameSftpPath() {
 
 onMounted(() => {
   loadHosts();
+  loadSessions();
   loadCommandHistory();
+  window.addEventListener('resize', scheduleAutoResize);
 });
-onBeforeUnmount(disconnectTerminal);
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', scheduleAutoResize);
+  if (resizeTimer) {
+    window.clearTimeout(resizeTimer);
+  }
+  disconnectTerminal();
+});
 </script>
 
 <template>
@@ -539,14 +671,46 @@ onBeforeUnmount(disconnectTerminal);
         <div class="wd-card wd-log-card">
           <header>
             <h2><Terminal :size="17" /> Web SSH</h2>
-            <span>{{ terminalStatus }}</span>
+            <div class="wd-terminal-controls">
+              <span>{{ terminalStatus }}</span>
+              <label><small>列</small><input v-model.number="terminalCols" type="number" min="40" max="240" /></label>
+              <label><small>行</small><input v-model.number="terminalRows" type="number" min="10" max="80" /></label>
+              <button type="button" class="ghost" @click="sendTerminalResize"><RefreshCw :size="15" />同步尺寸</button>
+              <button type="button" class="ghost" @click="autoResizeTerminal">自适应</button>
+              <button type="button" class="ghost" :disabled="!currentWebsocketPath" @click="reconnectSession()">
+                <RefreshCw :size="15" />重连
+              </button>
+            </div>
           </header>
           <pre ref="terminalRef" class="wd-terminal">{{ terminalOutput }}</pre>
           <div class="wd-command-row terminal-input-row">
             <input v-model="terminalInput" placeholder="输入命令，Enter 发送" @keyup.enter="sendTerminalLine" />
-            <button type="button" @click="sendTerminalLine"><Zap :size="16" />发送</button>
+            <button type="button" :disabled="!terminalConnected" @click="sendTerminalLine"><Zap :size="16" />发送</button>
             <button type="button" @click="sendCtrlC"><Square :size="14" />Ctrl+C</button>
             <button type="button" class="ghost" @click="disconnectTerminal">断开</button>
+          </div>
+          <div class="wd-session-strip">
+            <div class="wd-session-title">
+              <strong>Web SSH 会话列表</strong>
+              <button type="button" class="wd-link-button" @click="loadSessions">刷新</button>
+            </div>
+            <article v-if="sshSessions.length === 0" class="wd-session-empty">暂无可重连会话</article>
+            <article
+              v-for="session in sshSessions"
+              :key="session.sessionId"
+              class="wd-session-card"
+              :class="{ active: session.sessionId === currentSessionId }"
+            >
+              <div>
+                <b>{{ sessionTarget(session) }}</b>
+                <span>创建 {{ formatTime(session.createdAt) }} · 连接 {{ session.connectCount || 0 }} 次</span>
+                <small>最后连接 {{ formatTime(session.lastConnectedAt) }} · 过期 {{ formatTime(session.expiresAt) }}</small>
+              </div>
+              <div class="wd-row-actions">
+                <button type="button" @click="reconnectSession(session)">重连</button>
+                <button type="button" class="danger-soft" @click="deleteSession(session)">删除</button>
+              </div>
+            </article>
           </div>
         </div>
 

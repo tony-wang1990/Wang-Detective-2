@@ -3,6 +3,7 @@ package com.tony.kingdetective.service.impl;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.tony.kingdetective.bean.entity.OciKv;
 import com.tony.kingdetective.enums.SysCfgEnum;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.Resource;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * <p>
@@ -31,6 +33,7 @@ public class TgMessageServiceImpl implements IMessageService {
     private IOciKvService kvService;
 
     private static final String TG_URL = "https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s";
+    private static final String TG_SEND_URL = "https://api.telegram.org/bot%s/sendMessage";
 
     @Override
     public void sendMessage(String message) {
@@ -40,6 +43,16 @@ public class TgMessageServiceImpl implements IMessageService {
         if (null != tgToken && StrUtil.isNotBlank(tgToken.getValue()) &&
                 null != tgChatId && StrUtil.isNotBlank(tgChatId.getValue())) {
             doSend(message, tgToken.getValue(), tgChatId.getValue());
+        }
+    }
+
+    public void sendVersionUpdateMessage(String message) {
+        OciKv tgToken = kvService.getOne(new LambdaQueryWrapper<OciKv>().eq(OciKv::getCode, SysCfgEnum.SYS_TG_BOT_TOKEN.getCode()));
+        OciKv tgChatId = kvService.getOne(new LambdaQueryWrapper<OciKv>().eq(OciKv::getCode, SysCfgEnum.SYS_TG_CHAT_ID.getCode()));
+
+        if (null != tgToken && StrUtil.isNotBlank(tgToken.getValue()) &&
+                null != tgChatId && StrUtil.isNotBlank(tgChatId.getValue())) {
+            doSendWithUpdateButton(message, tgToken.getValue(), tgChatId.getValue());
         }
     }
 
@@ -57,6 +70,35 @@ public class TgMessageServiceImpl implements IMessageService {
         } catch (Exception e) {
             log.error("error while sending telegram message: ", e);
 //            throw new RuntimeException(e);
+        }
+    }
+
+    private void doSendWithUpdateButton(String message, String botToken, String chatId) {
+        try {
+            Object updateButton = JSONUtil.createObj()
+                    .set("text", "🔄 点击更新")
+                    .set("callback_data", "update_sys_version");
+            Object versionButton = JSONUtil.createObj()
+                    .set("text", "📦 查看版本")
+                    .set("callback_data", "version_info");
+            String body = JSONUtil.createObj()
+                    .set("chat_id", chatId)
+                    .set("text", message)
+                    .set("reply_markup", JSONUtil.createObj()
+                            .set("inline_keyboard", List.of(List.of(updateButton), List.of(versionButton))))
+                    .toString();
+            HttpResponse response = HttpUtil.createPost(String.format(TG_SEND_URL, botToken))
+                    .contentType("application/json")
+                    .body(body)
+                    .execute();
+
+            if (response.getStatus() == 200) {
+                log.info("telegram version update message send successfully!");
+            } else {
+                log.info("failed to send telegram version update message, response code: [{}]", response.getStatus());
+            }
+        } catch (Exception e) {
+            log.error("error while sending telegram version update message: ", e);
         }
     }
 }

@@ -53,7 +53,7 @@ docker compose up -d --force-recreate
 - **UI 重建和完善仍是下一阶段最大重点。** 生产入口已切到新 Vue，首页、配置、任务、日志、系统配置、运维终端均可用，但仍需要继续做视觉细节、移动端适配、更多空状态/错误状态和旧版高级操作补齐。
 - 配置列表已接入新增 OCI 配置、真实分页、测活、实时详情、改名、删除、放行和停任务；后续还要补完整实例操作入口、批量策略和更友好的 OCI 错误解释。
 - 首页已接入 Leaflet 地图、健康检查和 `/metrics/{token}` 实时指标；后续要继续做 Always Free/配额风险卡片和跨区域资源摘要。
-- 运维终端已具备 Vue 内 Web SSH、单命令、命令模板、命令历史、SFTP 上传/下载/重命名/删除和删除二次确认；操作审计已进入左侧菜单；后续要补终端 resize/重连和大文件进度。
+- 运维终端已具备 Vue 内 Web SSH、单命令、命令模板、命令历史、会话列表、断线重连、终端 resize、SFTP 上传/下载/重命名/删除和删除二次确认；操作审计已进入左侧菜单；后续要补大文件进度、端口转发和权限分级。
 - 旧版完整控制台和旧 bundle 暂时保留为回退入口，验证稳定后再清理。
 - 移动端/窄屏布局还需要专项优化。
 - Telegram Bot 已新增运维中心、系统诊断、任务状态、最近日志、审计摘要、主机概览和快捷入口；后续建议继续增加安全确认后的快捷命令、SSH 主机分组和异常告警订阅。
@@ -84,7 +84,7 @@ docker compose up -d --force-recreate
 - 新增 SSH 主机资产库：保存常用主机、AES-GCM 加密保存密码/私钥、通过 `hostId` 复用凭据。
 - 新增发布前代码审计修复：MFA 登录、配置新增、配置 OCI 实时详情、TGBOT 回调覆盖、操作审计和主机概览。
 - 新增 Vue 原生操作审计页：左侧菜单“操作审计”，支持最近审计流水、成功/失败统计、来源 IP 统计、关键字搜索、状态筛选和详情查看。
-- 增强运维终端：新增常用 SSH 命令模板、本地命令历史和 SFTP 删除前 `DELETE` 二次确认。
+- 增强运维终端：新增常用 SSH 命令模板、本地命令历史、Web SSH 会话列表、断线重连、终端 resize 同步和 SFTP 删除前 `DELETE` 二次确认。
 
 ## 运维终端
 
@@ -98,7 +98,7 @@ http://your-server-ip:9527/dashboard/ops-terminal
 
 - 测试 SSH 连接。
 - 保存/更新常用 SSH 主机，后续直接选择主机执行操作。
-- 打开交互式 Web SSH 终端。
+- 打开交互式 Web SSH 终端，支持会话列表、断线后重连和终端尺寸同步。
 - 执行单台机器命令并返回 stdout/stderr/exit status。
 - 批量对多台机器执行同一条命令。
 - SFTP 浏览目录、读取小文本文件、写入文件、上传/下载文件、创建目录、重命名和删除。
@@ -195,9 +195,23 @@ UI 重设计路线和后续拆分见 [docs/UI_REDESIGN_ROADMAP.md](docs/UI_REDES
 
 - SSH 命令区新增常用模板：系统概览、Docker 状态、应用日志和端口监听。
 - 执行过的 SSH 命令会保存在浏览器本地历史中，最多保留最近 6 条，便于重复执行。
+- Web SSH 新增会话列表，后端短时保存会话凭据，前端可查看当前可重连会话。
+- Web SSH 新增断线重连，断开后可从当前会话或会话列表重新建立终端连接。
+- Web SSH 新增终端 resize，同步列/行尺寸到 JSch shell，支持手动填写和根据终端区域自适应。
 - SFTP 删除操作取消浏览器弹窗，改为页面内输入 `DELETE` 的二次确认。
 - 删除确认区会展示当前选中的路径，减少误删远程文件或目录的风险。
 - 已通过 `npm --prefix frontend run build`，并同步更新生产 dist 资源。
+
+## 2026-05-17 Web/TGBOT 自动更新增强
+
+本次把版本检测和一键更新统一到 Web 与 Telegram Bot：
+
+- Web 顶栏会自动调用 `/api/v1/system/version-info` 检测 `Wang-Detective/main` 最新构建版本。
+- 检测到新版本时，Web 顶栏显示“更新 latestVersion”按钮，点击后调用 `/api/v1/system/trigger-update` 写入 watcher 触发文件。
+- TGBOT “版本信息”菜单会显示当前版本、最新版本、更新状态和“点击更新到最新版本”按钮。
+- TGBOT 每日自动版本检测发现新版本时，会发送带 Inline Button 的通知，可直接点击触发更新。
+- Web、系统服务和 TGBOT 均统一写入 `/app/king-detective/runtime/update_version_trigger.flag`，避免旧路径导致 watcher 不响应。
+- 已通过 `npm --prefix frontend run build`；本地仍缺少 Java/Maven，后端编译由 GitHub Actions 构建继续验证。
 
 ## 2026-05-17 代码审计与功能修复
 
