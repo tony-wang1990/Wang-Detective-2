@@ -942,6 +942,39 @@ html.dark .wd-leaflet-map .leaflet-tile {
   border-bottom: 1px solid var(--wd-line);
 }
 
+.wd-template-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 14px 0;
+}
+
+.wd-template-bar span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--wd-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wd-template-bar button {
+  min-height: 28px;
+  border: 1px solid var(--wd-line);
+  border-radius: 999px;
+  padding: 0 10px;
+  background: color-mix(in srgb, var(--wd-accent) 10%, var(--wd-surface));
+  color: var(--wd-accent-2);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wd-template-bar button.ghost {
+  background: var(--wd-surface);
+  color: var(--wd-muted);
+}
+
 .wd-command-row.terminal-input-row {
   grid-template-columns: minmax(0, 1fr) auto auto auto;
 }
@@ -958,6 +991,32 @@ html.dark .wd-leaflet-map .leaflet-tile {
 .wd-sftp-toolbar {
   grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto auto auto;
   align-items: center;
+}
+
+.wd-danger-confirm {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 360px) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 14px;
+  border-bottom: 1px solid var(--wd-line);
+}
+
+.wd-danger-confirm span,
+.wd-danger-confirm small {
+  color: var(--wd-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wd-danger-confirm input {
+  min-height: 34px;
+  border: 1px solid color-mix(in srgb, var(--wd-danger) 38%, var(--wd-line));
+  border-radius: 8px;
+  padding: 0 11px;
+  background: var(--wd-surface);
+  color: var(--wd-text);
+  outline: 0;
 }
 
 .wd-inline-field,

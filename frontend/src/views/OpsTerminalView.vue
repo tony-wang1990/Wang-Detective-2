@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { Download, FilePenLine, FolderPlus, FolderOpen, Play, RefreshCw, Save, Server, Square, Terminal, Trash2, Upload, Wifi, Zap } from 'lucide-vue-next';
+import { Download, FilePenLine, FolderPlus, FolderOpen, ListChecks, Play, RefreshCw, Save, Server, Square, Terminal, Trash2, Upload, Wifi, Zap } from 'lucide-vue-next';
 import { opsDownload, opsGet, opsPost, opsUpload } from '../api/http';
 
 type Host = {
@@ -40,6 +40,7 @@ const terminalInput = ref('');
 const terminalStatus = ref('未连接');
 const terminalRef = ref<HTMLElement | null>(null);
 const command = ref('uname -a && uptime');
+const commandHistory = ref<string[]>([]);
 const sftpPath = ref('.');
 const sftpEntries = ref<SftpEntry[]>([]);
 const selectedSftpPath = ref('');
@@ -47,6 +48,7 @@ const editorPath = ref('');
 const editorContent = ref('');
 const newDirName = ref('');
 const renameTarget = ref('');
+const deleteConfirm = ref('');
 const uploadTargetPath = ref('');
 const uploadFileInput = ref<HTMLInputElement | null>(null);
 const form = reactive({
@@ -61,6 +63,13 @@ const form = reactive({
   passphrase: ''
 });
 let terminalWs: WebSocket | null = null;
+
+const commandTemplates = [
+  { label: '系统概览', value: 'uname -a && uptime && free -h && df -h' },
+  { label: 'Docker 状态', value: 'docker ps --format "table {{.Names}}\\t{{.Status}}\\t{{.Ports}}" && docker stats --no-stream' },
+  { label: '应用日志', value: 'tail -n 120 /var/log/king-detective.log' },
+  { label: '端口监听', value: 'ss -tulpn | grep -E ":80|:443|:9527" || true' }
+];
 
 const currentHost = computed(() => hosts.value.find((host) => host.id === selectedHostId.value));
 
@@ -126,6 +135,25 @@ function fillHost(host: Host) {
   form.authType = host.authType || 'password';
 }
 
+function loadCommandHistory() {
+  try {
+    commandHistory.value = JSON.parse(localStorage.getItem('opsCommandHistory') || '[]').slice(0, 6);
+  } catch {
+    commandHistory.value = [];
+  }
+}
+
+function rememberCommand(value: string) {
+  const text = value.trim();
+  if (!text) return;
+  commandHistory.value = [text, ...commandHistory.value.filter((item) => item !== text)].slice(0, 6);
+  localStorage.setItem('opsCommandHistory', JSON.stringify(commandHistory.value));
+}
+
+function applyCommand(value: string) {
+  command.value = value;
+}
+
 async function loadHosts() {
   try {
     const res = await opsGet<Host[]>('/ssh/hosts');
@@ -165,6 +193,7 @@ async function execCommand() {
       command: command.value,
       timeoutSeconds: 60
     });
+    rememberCommand(command.value);
     const data = res.data || {};
     output.value = [
       `host: ${data.name || data.host || '-'}`,
@@ -389,7 +418,8 @@ async function deleteSftpPath() {
     status.value = '请选择要删除的路径';
     return;
   }
-  if (!window.confirm(`确认删除 ${path} ?`)) {
+  if (deleteConfirm.value.trim() !== 'DELETE') {
+    status.value = '删除前请在确认框输入 DELETE';
     return;
   }
   status.value = '删除中';
@@ -400,6 +430,7 @@ async function deleteSftpPath() {
       recursive: true
     });
     selectedSftpPath.value = '';
+    deleteConfirm.value = '';
     status.value = '路径已删除';
     await listSftp();
   } catch (error) {
@@ -429,7 +460,10 @@ async function renameSftpPath() {
   }
 }
 
-onMounted(loadHosts);
+onMounted(() => {
+  loadHosts();
+  loadCommandHistory();
+});
 onBeforeUnmount(disconnectTerminal);
 </script>
 
@@ -486,6 +520,15 @@ onBeforeUnmount(disconnectTerminal);
             <h2><Terminal :size="17" /> SSH 命令</h2>
             <span>{{ status || '待命' }}</span>
           </header>
+          <div class="wd-template-bar">
+            <span><ListChecks :size="15" />模板</span>
+            <button v-for="item in commandTemplates" :key="item.label" type="button" @click="applyCommand(item.value)">
+              {{ item.label }}
+            </button>
+            <button v-for="item in commandHistory" :key="item" type="button" class="ghost" @click="applyCommand(item)">
+              {{ item.length > 18 ? `${item.slice(0, 18)}...` : item }}
+            </button>
+          </div>
           <div class="wd-command-row">
             <input v-model="command" placeholder="输入命令" @keyup.enter="execCommand" />
             <button type="button" @click="execCommand"><Play :size="16" />执行</button>
@@ -528,6 +571,11 @@ onBeforeUnmount(disconnectTerminal);
             <button type="button" class="ghost" @click="readSftpFile()"><FilePenLine :size="16" />读取</button>
             <button type="button" class="ghost" @click="downloadSftpFile()"><Download :size="16" />下载</button>
             <button type="button" class="danger" @click="deleteSftpPath"><Trash2 :size="16" />删除</button>
+          </div>
+          <div class="wd-danger-confirm">
+            <span>删除确认</span>
+            <input v-model="deleteConfirm" placeholder="输入 DELETE 后允许删除选中路径" />
+            <small>{{ selectedSftpPath || editorPath || '未选择路径' }}</small>
           </div>
           <table class="wd-table">
             <thead><tr><th>名称</th><th>类型</th><th>大小</th><th>路径</th><th>操作</th></tr></thead>
