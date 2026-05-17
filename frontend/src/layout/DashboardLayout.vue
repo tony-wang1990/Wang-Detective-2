@@ -4,12 +4,12 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   Bot,
   ClipboardList,
+  ExternalLink,
   FileText,
   Home,
   LogOut,
   Menu,
   Moon,
-  ExternalLink,
   RefreshCw,
   Search,
   ServerCog,
@@ -41,6 +41,7 @@ const updateAvailable = ref(false);
 const versionStatus = ref('');
 const updatingVersion = ref(false);
 const sidebarCollapsed = ref(false);
+const globalSearch = ref('');
 let healthTimer: number | undefined;
 let versionTimer: number | undefined;
 
@@ -66,6 +67,25 @@ function isActive(item: { path: string; match?: string[] }) {
 function logout() {
   sessionStorage.clear();
   router.push('/login');
+}
+
+function runGlobalSearch() {
+  const text = globalSearch.value.trim().toLowerCase();
+  if (!text) {
+    return;
+  }
+  const target = navItems.find((item) => {
+    const label = item.label.toLowerCase();
+    return label.includes(text)
+      || item.path.toLowerCase().includes(text)
+      || (text.includes('ssh') && item.path.includes('ops-terminal'))
+      || (text.includes('log') && item.path.includes('ociLog'))
+      || (text.includes('oci') && item.path.includes('user'));
+  });
+  if (target) {
+    router.push(target.path);
+    globalSearch.value = '';
+  }
 }
 
 async function refreshTopStatus() {
@@ -96,11 +116,11 @@ async function refreshVersionInfo() {
     updateAvailable.value = Boolean(info.updateAvailable ?? (
       info.latestVersion && info.currentVersion && info.latestVersion !== info.currentVersion
     ));
-    if (info.watcherActive === false) {
-      versionStatus.value = '自动更新 watcher 未运行，请重新执行安装脚本启用';
-    } else {
-      versionStatus.value = updateAvailable.value ? '发现新版本，可点击更新' : '已是最新版本';
-    }
+    versionStatus.value = info.watcherActive === false
+      ? '自动更新 watcher 未运行，请重新执行安装脚本启用'
+      : updateAvailable.value
+        ? '发现新版本，可点击更新'
+        : '已是最新版本';
   } catch (error) {
     versionStatus.value = error instanceof Error ? error.message : '版本检测失败';
   }
@@ -184,8 +204,8 @@ onBeforeUnmount(() => {
         </button>
         <label class="wd-search">
           <Search :size="16" />
-          <input placeholder="搜索资源、任务、日志等..." readonly />
-          <kbd>⌘K</kbd>
+          <input v-model="globalSearch" placeholder="搜索资源、任务、日志等..." @keyup.enter="runGlobalSearch" />
+          <kbd>Enter</kbd>
         </label>
         <div class="wd-top-status">
           <span class="dot" :class="healthClass"></span>

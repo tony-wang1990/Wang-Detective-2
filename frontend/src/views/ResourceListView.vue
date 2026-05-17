@@ -1,6 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { CheckCircle2, ExternalLink, RefreshCw, ShieldCheck, Trash2, UploadCloud, UserRound } from 'lucide-vue-next';
+import {
+  CheckCircle2,
+  Cpu,
+  ExternalLink,
+  HardDrive,
+  Network,
+  Play,
+  Power,
+  RefreshCw,
+  RotateCcw,
+  ShieldCheck,
+  Square,
+  Terminal,
+  Trash2,
+  UploadCloud,
+  UserRound,
+  Zap
+} from 'lucide-vue-next';
 import { apiForm, apiPost, type PageResult } from '../api/http';
 
 type Row = {
@@ -17,6 +34,60 @@ type Row = {
   [key: string]: unknown;
 };
 
+type VnicInfo = {
+  vnicId?: string;
+  name?: string;
+};
+
+type InstanceInfo = {
+  ocId?: string;
+  region?: string;
+  name?: string;
+  publicIp?: string[];
+  shape?: string;
+  enableChangeIp?: number;
+  ocpus?: string;
+  memory?: string;
+  bootVolumeSize?: string;
+  createTime?: string;
+  state?: string;
+  availabilityDomain?: string;
+  vnicList?: VnicInfo[];
+  [key: string]: unknown;
+};
+
+type CfCfg = {
+  cfCfgId?: string;
+  domain?: string;
+};
+
+type NetLoadBalancer = {
+  name?: string;
+  status?: string;
+  publicIp?: string;
+};
+
+type OciDetail = {
+  userId?: string;
+  tenantId?: string;
+  fingerprint?: string;
+  privateKeyPath?: string;
+  region?: string;
+  instanceList?: InstanceInfo[];
+  cfCfgList?: CfCfg[];
+  nlbList?: NetLoadBalancer[];
+};
+
+type InstanceCfg = {
+  instanceName?: string;
+  ipv6?: string;
+  ocpus?: string;
+  memory?: string;
+  bootVolumeSize?: string;
+  bootVolumeVpu?: string;
+  shape?: string;
+};
+
 const loading = ref(false);
 const keyword = ref('');
 const rows = ref<Row[]>([]);
@@ -28,15 +99,36 @@ const pageSize = ref(10);
 const isEnableCreate = ref<string>('');
 const selectedIds = ref<string[]>([]);
 const selectedDetail = ref<Row | null>(null);
+const detail = ref<OciDetail | null>(null);
+const selectedInstanceCfg = ref<InstanceCfg | null>(null);
 const detailLoading = ref(false);
+const actionBusy = ref('');
 const showAddForm = ref(false);
+const showCreateForm = ref(false);
 const keyFile = ref<File | null>(null);
+
 const addForm = reactive({
   username: '',
   ociCfgStr: ''
 });
+
+const createForm = reactive({
+  ocpus: '1',
+  memory: '6',
+  disk: 50,
+  architecture: 'ARM',
+  interval: 80,
+  createNumbers: 1,
+  operationSystem: 'Canonical Ubuntu',
+  rootPassword: ''
+});
+
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)));
 const selectedCount = computed(() => selectedIds.value.length);
+const selectedCfgId = computed(() => selectedDetail.value ? rowId(selectedDetail.value) : '');
+const detailInstances = computed(() => detail.value?.instanceList || []);
+const detailCfCfgs = computed(() => detail.value?.cfCfgList || []);
+const detailNlbs = computed(() => detail.value?.nlbList || []);
 
 const columns = [
   { key: 'username', label: '配置名称' },
@@ -73,6 +165,55 @@ function cell(row: Row, key: string) {
 function statusClass(row: Row) {
   const enabled = Number(row.enableCreate ?? 0) === 1 || row.isEnableCreate === true;
   return enabled ? 'success' : 'muted';
+}
+
+function instanceId(instance: InstanceInfo) {
+  return String(instance.ocId || '');
+}
+
+function instanceLabel(instance: InstanceInfo) {
+  return String(instance.name || instance.ocId || '-');
+}
+
+function publicIps(instance: InstanceInfo) {
+  return (instance.publicIp || []).filter(Boolean).join(', ') || '-';
+}
+
+function firstVnicId(instance: InstanceInfo) {
+  return instance.vnicList?.find((vnic) => vnic.vnicId)?.vnicId || '';
+}
+
+function stateClass(state?: string) {
+  const normalized = String(state || '').toUpperCase();
+  if (['RUNNING', 'ACTIVE'].includes(normalized)) return 'success';
+  if (['STOPPED', 'TERMINATED'].includes(normalized)) return 'muted';
+  if (['STOPPING', 'STARTING', 'PROVISIONING'].includes(normalized)) return 'warning';
+  return 'info';
+}
+
+function actionKey(action: string, id?: string) {
+  return `${action}:${id || ''}`;
+}
+
+function isBusy(action: string, id?: string) {
+  return actionBusy.value === actionKey(action, id);
+}
+
+async function runAction(label: string, key: string, fn: () => Promise<void>, refreshDetail = true) {
+  actionBusy.value = key;
+  error.value = '';
+  try {
+    await fn();
+    notice.value = `${label} 已提交`;
+    if (refreshDetail && selectedDetail.value) {
+      await loadDetails(true);
+    }
+    await load();
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : `${label} 失败`;
+  } finally {
+    actionBusy.value = '';
+  }
 }
 
 function toggleRow(row: Row) {
@@ -114,16 +255,10 @@ async function load() {
 }
 
 async function checkAlive() {
-  loading.value = true;
-  try {
+  await runAction('一键测活', 'check-alive', async () => {
     const res = await apiPost<unknown>('/oci/checkAlive', {});
     notice.value = res.msg || '测活完成';
-    await load();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '测活失败';
-  } finally {
-    loading.value = false;
-  }
+  }, false);
 }
 
 function onKeyFileChange(event: Event) {
@@ -144,14 +279,14 @@ async function addConfig() {
     form.append('ociCfgStr', addForm.ociCfgStr.trim());
     form.append('file', keyFile.value);
     const res = await apiForm<void>('/oci/addCfg', form);
-    notice.value = res.msg || '配置已新增';
+    notice.value = res.msg || '配置添加完成';
     addForm.username = '';
     addForm.ociCfgStr = '';
     keyFile.value = null;
     showAddForm.value = false;
     await load();
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '新增配置失败';
+    error.value = err instanceof Error ? err.message : '配置添加失败';
   } finally {
     loading.value = false;
   }
@@ -162,49 +297,52 @@ async function renameConfig(row: Row) {
   if (!id) return;
   const nextName = window.prompt('请输入新的配置名称', displayName(row));
   if (!nextName || nextName === displayName(row)) return;
-  try {
+  await runAction('修改配置名称', actionKey('rename-cfg', id), async () => {
     await apiPost('/oci/updateCfgName', { cfgId: id, updateCfgName: nextName });
-    notice.value = '配置名称已修改';
-    await load();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '修改配置名称失败';
-  }
+  }, false);
 }
 
 async function deleteSelected() {
   if (!selectedIds.value.length) return;
-  if (!window.confirm(`确认删除 ${selectedIds.value.length} 个配置？`)) return;
-  try {
+  if (!window.confirm(`确认删除 ${selectedIds.value.length} 个配置？此操作会删除配置和密钥数据。`)) return;
+  await runAction('删除配置', 'delete-selected', async () => {
     await apiPost('/oci/removeCfg', { idList: selectedIds.value });
-    notice.value = '配置已删除';
     selectedIds.value = [];
-    await load();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '删除配置失败';
-  }
+  }, false);
 }
 
 async function stopCreate(row: Row) {
   const id = rowId(row);
   if (!id || !window.confirm(`确认停止 ${displayName(row)} 的开机任务？`)) return;
-  try {
+  await runAction('停止开机任务', actionKey('stop-create', id), async () => {
     await apiPost('/oci/stopCreate', { userId: id });
-    notice.value = '停止开机任务已提交';
-    await load();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '停止开机任务失败';
-  }
+  }, false);
 }
 
 async function releaseSecurityRule(row: Row) {
   const id = rowId(row);
-  if (!id || !window.confirm(`确认放行 ${displayName(row)} 的安全列表？`)) return;
-  try {
+  if (!id || !window.confirm(`确认放行 ${displayName(row)} 的安全列表？这会修改 OCI 安全规则。`)) return;
+  await runAction('安全列表放行', actionKey('release-rule', id), async () => {
     await apiPost('/oci/releaseSecurityRule', { ociCfgId: id });
-    notice.value = '安全列表放行任务已提交';
-    await load();
+  }, false);
+}
+
+async function loadDetails(force: boolean) {
+  const cfgId = selectedCfgId.value;
+  if (!cfgId) return;
+  detailLoading.value = true;
+  selectedInstanceCfg.value = null;
+  try {
+    const res = await apiPost<OciDetail>('/oci/details', {
+      cfgId,
+      cleanReLaunchDetails: force
+    });
+    detail.value = res.data || {};
+    notice.value = force ? '已刷新 OCI 实时数据' : '已读取配置详情';
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '安全列表放行失败';
+    error.value = err instanceof Error ? err.message : '读取 OCI 实时数据失败';
+  } finally {
+    detailLoading.value = false;
   }
 }
 
@@ -212,23 +350,195 @@ async function openDetails(row: Row) {
   const id = rowId(row);
   if (!id) return;
   selectedDetail.value = row;
-  detailLoading.value = true;
-  error.value = '';
-  try {
-    const res = await apiPost<Record<string, unknown>>('/oci/details', {
-      cfgId: id,
-      cleanReLaunchDetails: true
-    });
-    selectedDetail.value = {
-      ...row,
-      liveDetails: res.data || {}
-    };
-    notice.value = '已读取 OCI 实时详情';
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '读取 OCI 实时详情失败';
-  } finally {
-    detailLoading.value = false;
+  detail.value = null;
+  await loadDetails(true);
+}
+
+async function createForSelected() {
+  const userIds = selectedIds.value.length ? selectedIds.value : selectedDetail.value ? [selectedCfgId.value] : [];
+  if (!userIds.length) {
+    error.value = '请至少选择一个 OCI 配置，或先打开某个配置详情';
+    return;
   }
+  if (!createForm.rootPassword.trim()) {
+    error.value = '请先填写 root 密码';
+    return;
+  }
+  await runAction('批量创建实例', 'create-instance-batch', async () => {
+    await apiPost('/oci/createInstanceBatch', {
+      userIds,
+      instanceInfo: {
+        ...createForm,
+        disk: Number(createForm.disk),
+        interval: Number(createForm.interval),
+        createNumbers: Number(createForm.createNumbers)
+      }
+    });
+    showCreateForm.value = false;
+  }, false);
+}
+
+async function updateInstanceState(instance: InstanceInfo, action: 'START' | 'STOP' | 'RESET') {
+  const id = instanceId(instance);
+  const label = action === 'START' ? '启动实例' : action === 'STOP' ? '停止实例' : '重启实例';
+  if (!id || !window.confirm(`确认${label}：${instanceLabel(instance)}？`)) return;
+  await runAction(label, actionKey(action, id), async () => {
+    await apiPost('/oci/updateInstanceState', { ociCfgId: selectedCfgId.value, instanceId: id, action });
+  });
+}
+
+async function renameInstance(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  const nextName = window.prompt('请输入新的实例名称', instanceLabel(instance));
+  if (!id || !nextName || nextName === instanceLabel(instance)) return;
+  await runAction('修改实例名称', actionKey('rename-instance', id), async () => {
+    await apiPost('/oci/updateInstanceName', { ociCfgId: selectedCfgId.value, instanceId: id, name: nextName });
+  });
+}
+
+async function changeIp(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  const vnicId = firstVnicId(instance);
+  if (!id || !vnicId) {
+    error.value = '此实例未返回可用 VNIC，无法换 IP';
+    return;
+  }
+  const cidr = window.prompt('请输入允许临时 SSH 的 CIDR', '0.0.0.0/0');
+  if (!cidr) return;
+  await runAction('提交换 IP 任务', actionKey('change-ip', id), async () => {
+    await apiPost('/oci/changeIp', {
+      ociCfgId: selectedCfgId.value,
+      instanceId: id,
+      vnicId,
+      cidrList: cidr.split(',').map((item) => item.trim()).filter(Boolean),
+      changeCfDns: false,
+      enableProxy: false,
+      ttl: 60
+    });
+  });
+}
+
+async function stopChangeIp(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  if (!id || !window.confirm(`确认停止 ${instanceLabel(instance)} 的换 IP 任务？`)) return;
+  await runAction('停止换 IP 任务', actionKey('stop-change-ip', id), async () => {
+    await apiPost('/oci/stopChangeIp', { instanceId: id });
+  });
+}
+
+async function createIpv6(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  if (!id || !window.confirm(`确认给 ${instanceLabel(instance)} 创建 IPv6？`)) return;
+  await runAction('创建 IPv6', actionKey('ipv6', id), async () => {
+    await apiPost('/oci/createIpv6', { ociCfgId: selectedCfgId.value, instanceId: id });
+  });
+}
+
+async function startVnc(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  if (!id) return;
+  await runAction('启动 VNC', actionKey('vnc', id), async () => {
+    const res = await apiPost<string>('/oci/startVnc', { ociCfgId: selectedCfgId.value, instanceId: id });
+    notice.value = res.data || res.msg || 'VNC 已开启';
+  }, false);
+}
+
+async function autoRescue(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  const name = window.prompt('请输入救援实例名称', `${instanceLabel(instance)}-rescue`);
+  if (!id || !name) return;
+  const keepBackupVolume = window.confirm('是否保留备份卷？选择确认保留，选择取消自动清理。');
+  await runAction('自动救援', actionKey('rescue', id), async () => {
+    await apiPost('/oci/autoRescue', { ociCfgId: selectedCfgId.value, instanceId: id, name, keepBackupVolume });
+  });
+}
+
+async function enable500M(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  const sshPort = Number(window.prompt('请输入实例 SSH 端口', '22') || 22);
+  if (!id || Number.isNaN(sshPort)) return;
+  await runAction('开启 500M', actionKey('500m-on', id), async () => {
+    await apiPost('/oci/oneClick500M', { ociCfgId: selectedCfgId.value, instanceId: id, sshPort });
+  }, true);
+}
+
+async function close500M(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  if (!id) return;
+  const retain = window.confirm('关闭 500M 后是否保留负载均衡器和 NAT 网关？');
+  await runAction('关闭 500M', actionKey('500m-off', id), async () => {
+    await apiPost('/oci/oneClickClose500M', {
+      ociCfgId: selectedCfgId.value,
+      instanceId: id,
+      retainBl: retain,
+      retainNatGw: retain
+    });
+  });
+}
+
+async function getInstanceCfg(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  if (!id) return;
+  await runAction('读取实例配置', actionKey('cfg-info', id), async () => {
+    const res = await apiPost<InstanceCfg>('/oci/getInstanceCfgInfo', { ociCfgId: selectedCfgId.value, instanceId: id });
+    selectedInstanceCfg.value = res.data || {};
+  }, false);
+}
+
+async function updateInstanceCfg(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  const current = selectedInstanceCfg.value;
+  const ocpus = window.prompt('请输入 OCPU 数量', current?.ocpus || instance.ocpus || '1');
+  if (!id || !ocpus) return;
+  const memory = window.prompt('请输入内存 GB', current?.memory || instance.memory || '6');
+  if (!memory) return;
+  await runAction('调整 CPU/内存', actionKey('resize-cfg', id), async () => {
+    await apiPost('/oci/updateInstanceCfg', { ociCfgId: selectedCfgId.value, instanceId: id, ocpus, memory });
+  });
+}
+
+async function updateShape(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  const shape = window.prompt('请输入 Shape', selectedInstanceCfg.value?.shape || instance.shape || 'VM.Standard.A1.Flex');
+  if (!id || !shape) return;
+  await runAction('修改 Shape', actionKey('shape', id), async () => {
+    await apiPost('/oci/updateInstanceShape', { ociCfgId: selectedCfgId.value, instanceId: id, shape });
+  });
+}
+
+async function updateBootVolume(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  const size = window.prompt('请输入引导卷大小 GB', selectedInstanceCfg.value?.bootVolumeSize || instance.bootVolumeSize || '50');
+  if (!id || !size) return;
+  const vpu = window.prompt('请输入引导卷 VPU', selectedInstanceCfg.value?.bootVolumeVpu || '10');
+  if (!vpu) return;
+  await runAction('调整引导卷', actionKey('boot-volume', id), async () => {
+    await apiPost('/oci/updateBootVolumeCfg', {
+      ociCfgId: selectedCfgId.value,
+      instanceId: id,
+      bootVolumeSize: size,
+      bootVolumeVpu: vpu
+    });
+  });
+}
+
+async function terminateInstance(instance: InstanceInfo) {
+  const id = instanceId(instance);
+  if (!id || !window.confirm(`将向 ${instanceLabel(instance)} 发送终止验证码，继续吗？`)) return;
+  await runAction('发送终止验证码', actionKey('captcha', id), async () => {
+    await apiPost('/oci/sendCaptcha', { ociCfgId: selectedCfgId.value, instanceId: id });
+  }, false);
+  const captcha = window.prompt('验证码已发送到通知渠道，请输入验证码继续终止实例');
+  if (!captcha) return;
+  const preserveBootVolume = window.confirm('是否保留引导卷？选择确认保留，选择取消将同时删除引导卷。') ? 1 : 0;
+  await runAction('终止实例', actionKey('terminate', id), async () => {
+    await apiPost('/oci/terminateInstance', {
+      ociCfgId: selectedCfgId.value,
+      instanceId: id,
+      preserveBootVolume,
+      captcha
+    });
+  });
 }
 
 function previousPage() {
@@ -253,15 +563,46 @@ onMounted(load);
     <div class="wd-page-title">
       <div>
         <h1>配置列表</h1>
-        <p>OCI API 配置、租户和区域资源入口，已补齐分页、筛选、测活、改名、删除和常用操作。</p>
+        <p>OCI API 配置、租户和实例资源入口，支持从详情页直接执行真实实例操作与运维闭环。</p>
       </div>
       <div class="wd-actions">
-        <button type="button" @click="load"><RefreshCw :size="16" />刷新</button>
-        <button type="button" @click="checkAlive"><CheckCircle2 :size="16" />一键测活</button>
+        <button type="button" :disabled="loading" @click="load"><RefreshCw :size="16" />刷新</button>
+        <button type="button" :disabled="isBusy('check-alive')" @click="checkAlive"><CheckCircle2 :size="16" />一键测活</button>
+        <button type="button" class="ghost" @click="showCreateForm = !showCreateForm"><Zap :size="16" />批量开机</button>
         <button type="button" class="ghost" @click="showAddForm = !showAddForm"><UploadCloud :size="16" />新增配置</button>
-        <button type="button" class="danger" :disabled="selectedCount === 0" @click="deleteSelected">
+        <button type="button" class="danger" :disabled="selectedCount === 0 || isBusy('delete-selected')" @click="deleteSelected">
           <Trash2 :size="16" />删除 {{ selectedCount || '' }}
         </button>
+      </div>
+    </div>
+
+    <div v-if="showCreateForm" class="wd-card wd-form-card">
+      <header>
+        <h2><Zap :size="17" /> 批量创建实例</h2>
+        <button type="button" class="ghost" @click="showCreateForm = false">收起</button>
+      </header>
+      <div class="wd-form-grid">
+        <label><span>OCPU</span><input v-model="createForm.ocpus" /></label>
+        <label><span>内存 GB</span><input v-model="createForm.memory" /></label>
+        <label><span>硬盘 GB</span><input v-model.number="createForm.disk" type="number" min="50" /></label>
+        <label>
+          <span>架构</span>
+          <select v-model="createForm.architecture">
+            <option value="ARM">ARM</option>
+            <option value="AMD">AMD</option>
+            <option value="AMD_E5">AMD_E5</option>
+          </select>
+        </label>
+        <label><span>重试间隔秒</span><input v-model.number="createForm.interval" type="number" min="10" /></label>
+        <label><span>创建数量</span><input v-model.number="createForm.createNumbers" type="number" min="1" /></label>
+        <label><span>系统镜像</span><input v-model="createForm.operationSystem" /></label>
+        <label><span>root 密码</span><input v-model="createForm.rootPassword" type="password" autocomplete="new-password" /></label>
+      </div>
+      <div class="wd-actions compact">
+        <button type="button" :disabled="isBusy('create-instance-batch')" @click="createForSelected">
+          <Play :size="16" />按已选配置创建实例
+        </button>
+        <span class="wd-help-line">未勾选配置时，将使用当前打开详情的配置。</span>
       </div>
     </div>
 
@@ -299,7 +640,7 @@ onMounted(load);
           </label>
           <select v-model="isEnableCreate" @change="resetPageAndLoad">
             <option value="">全部开机状态</option>
-            <option value="1">执行开机任务中</option>
+            <option value="1">执行开机任务</option>
             <option value="0">无开机任务</option>
           </select>
         </div>
@@ -329,7 +670,7 @@ onMounted(load);
             </td>
             <td>
               <div class="wd-row-actions">
-                <button type="button" @click="openDetails(row)"><ExternalLink :size="14" />实时详情</button>
+                <button type="button" @click="openDetails(row)"><ExternalLink :size="14" />实时资源</button>
                 <button type="button" @click="renameConfig(row)">改名</button>
                 <button type="button" @click="releaseSecurityRule(row)"><ShieldCheck :size="14" />放行</button>
                 <button type="button" :disabled="Number(row.enableCreate || 0) === 0" @click="stopCreate(row)">停止</button>
@@ -352,11 +693,84 @@ onMounted(load);
 
     <div v-if="selectedDetail" class="wd-card wd-detail-card">
       <header>
-        <h2>OCI 实时详情</h2>
-        <span v-if="detailLoading">读取 OCI 中...</span>
-        <button type="button" @click="selectedDetail = null">关闭</button>
+        <h2>OCI 实时操作台 · {{ displayName(selectedDetail) }}</h2>
+        <div class="wd-actions compact">
+          <button type="button" class="ghost" :disabled="detailLoading" @click="loadDetails(true)">
+            <RefreshCw :size="16" />刷新 OCI
+          </button>
+          <button type="button" class="ghost" @click="selectedDetail = null">关闭</button>
+        </div>
       </header>
-      <pre class="wd-terminal small">{{ JSON.stringify(selectedDetail, null, 2) }}</pre>
+
+      <div class="wd-detail-summary">
+        <div><span>用户 OCID</span><strong>{{ detail?.userId || '-' }}</strong></div>
+        <div><span>租户 OCID</span><strong>{{ detail?.tenantId || '-' }}</strong></div>
+        <div><span>区域</span><strong>{{ detail?.region || selectedDetail.region || '-' }}</strong></div>
+        <div><span>指纹</span><strong>{{ detail?.fingerprint || '-' }}</strong></div>
+      </div>
+
+      <p v-if="detailLoading" class="wd-muted-line">正在读取 OCI 实时资源...</p>
+      <p v-else-if="detailInstances.length === 0" class="wd-muted-line">当前配置暂无实例，或 OCI API 未返回实例。</p>
+
+      <div class="wd-instance-grid">
+        <article v-for="instance in detailInstances" :key="instanceId(instance)" class="wd-instance-panel">
+          <div class="wd-instance-head">
+            <div>
+              <h3>{{ instanceLabel(instance) }}</h3>
+              <span>{{ instance.ocId }}</span>
+            </div>
+            <em class="wd-badge" :class="stateClass(instance.state)">{{ instance.state || 'UNKNOWN' }}</em>
+          </div>
+
+          <div class="wd-instance-meta">
+            <div><Cpu :size="15" /><span>{{ instance.shape || '-' }}</span></div>
+            <div><Zap :size="15" /><span>{{ instance.ocpus || '-' }} OCPU / {{ instance.memory || '-' }} GB</span></div>
+            <div><HardDrive :size="15" /><span>{{ instance.bootVolumeSize || '-' }} GB</span></div>
+            <div><Network :size="15" /><span>{{ publicIps(instance) }}</span></div>
+          </div>
+
+          <div class="wd-instance-actions">
+            <button type="button" :disabled="isBusy('START', instanceId(instance))" @click="updateInstanceState(instance, 'START')"><Play :size="14" />启动</button>
+            <button type="button" :disabled="isBusy('STOP', instanceId(instance))" @click="updateInstanceState(instance, 'STOP')"><Square :size="14" />停止</button>
+            <button type="button" :disabled="isBusy('RESET', instanceId(instance))" @click="updateInstanceState(instance, 'RESET')"><RotateCcw :size="14" />重启</button>
+            <button type="button" class="ghost" @click="renameInstance(instance)">改名</button>
+            <button type="button" class="ghost" @click="getInstanceCfg(instance)">配置详情</button>
+            <button type="button" class="ghost" @click="updateInstanceCfg(instance)">CPU/内存</button>
+            <button type="button" class="ghost" @click="updateShape(instance)">Shape</button>
+            <button type="button" class="ghost" @click="updateBootVolume(instance)">引导卷</button>
+            <button type="button" class="ghost" @click="changeIp(instance)">换 IP</button>
+            <button type="button" class="ghost" :disabled="Number(instance.enableChangeIp || 0) === 0" @click="stopChangeIp(instance)">停换 IP</button>
+            <button type="button" class="ghost" @click="createIpv6(instance)">IPv6</button>
+            <button type="button" class="ghost" @click="startVnc(instance)"><Terminal :size="14" />VNC</button>
+            <button type="button" class="ghost" @click="autoRescue(instance)">救援</button>
+            <button type="button" class="ghost" @click="enable500M(instance)">500M</button>
+            <button type="button" class="ghost" @click="close500M(instance)">关 500M</button>
+            <button type="button" class="danger-soft" @click="terminateInstance(instance)"><Power :size="14" />终止</button>
+          </div>
+        </article>
+      </div>
+
+      <div v-if="selectedInstanceCfg" class="wd-config-preview">
+        <strong>最近读取的实例配置</strong>
+        <pre>{{ JSON.stringify(selectedInstanceCfg, null, 2) }}</pre>
+      </div>
+
+      <div class="wd-live-side">
+        <section>
+          <h3>Cloudflare 配置</h3>
+          <p v-if="detailCfCfgs.length === 0">暂无 Cloudflare 配置。</p>
+          <ul v-else>
+            <li v-for="cf in detailCfCfgs" :key="cf.cfCfgId">{{ cf.domain || cf.cfCfgId }}</li>
+          </ul>
+        </section>
+        <section>
+          <h3>网络负载均衡</h3>
+          <p v-if="detailNlbs.length === 0">暂无 NLB。</p>
+          <ul v-else>
+            <li v-for="nlb in detailNlbs" :key="`${nlb.name}-${nlb.publicIp}`">{{ nlb.name }} · {{ nlb.status }} · {{ nlb.publicIp || '-' }}</li>
+          </ul>
+        </section>
+      </div>
     </div>
   </section>
 </template>

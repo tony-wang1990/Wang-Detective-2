@@ -840,6 +840,188 @@ html.dark .wd-leaflet-map .leaflet-tile {
   max-width: 100%;
 }
 
+.wd-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--wd-line);
+}
+
+.wd-detail-summary div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wd-detail-summary span {
+  color: var(--wd-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wd-detail-summary strong {
+  min-width: 0;
+  color: var(--wd-text);
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.wd-help-line {
+  align-self: center;
+  color: var(--wd-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wd-instance-grid {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.wd-instance-panel {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  background: var(--wd-surface);
+}
+
+.wd-instance-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.wd-instance-head h3 {
+  margin: 0 0 4px;
+  color: var(--wd-text);
+  font-size: 16px;
+}
+
+.wd-instance-head span {
+  display: block;
+  color: var(--wd-muted);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.wd-instance-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.wd-instance-meta div {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  background: var(--wd-surface-2);
+  color: var(--wd-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wd-instance-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wd-instance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wd-instance-actions button {
+  min-height: 32px;
+  min-width: 68px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--wd-accent);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--wd-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wd-instance-actions button.ghost {
+  border-color: var(--wd-line);
+  background: var(--wd-surface-2);
+  color: var(--wd-text);
+}
+
+.wd-instance-actions button.danger-soft {
+  border-color: color-mix(in srgb, var(--wd-danger) 40%, var(--wd-line));
+  background: color-mix(in srgb, var(--wd-danger) 10%, var(--wd-surface));
+  color: var(--wd-danger);
+}
+
+.wd-config-preview {
+  margin: 0 16px 16px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.wd-config-preview strong {
+  display: block;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--wd-line);
+  background: var(--wd-surface-2);
+}
+
+.wd-config-preview pre {
+  max-height: 220px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  background: #020617;
+  color: #d1fae5;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+}
+
+.wd-live-side {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+
+.wd-live-side section {
+  padding: 12px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  background: var(--wd-surface-2);
+}
+
+.wd-live-side h3 {
+  margin: 0 0 8px;
+  color: var(--wd-text);
+  font-size: 14px;
+}
+
+.wd-live-side p,
+.wd-live-side li {
+  color: var(--wd-muted);
+  font-size: 13px;
+}
+
 .wd-terminal {
   min-height: 420px;
   margin: 0;
@@ -1440,6 +1622,7 @@ html.dark .wd-leaflet-map .leaflet-tile {
   box-shadow: 0 22px 60px rgba(20, 184, 166, .28);
 }
 
+.wd-login-mark,
 .wd-login-lockup {
   display: flex;
   align-items: center;
@@ -1447,6 +1630,7 @@ html.dark .wd-leaflet-map .leaflet-tile {
   margin-bottom: 28px;
 }
 
+.wd-login-mark span,
 .wd-login-lockup span {
   display: block;
   margin-bottom: 8px;
@@ -1605,6 +1789,9 @@ html.dark .wd-leaflet-map .leaflet-tile {
   .wd-form-grid,
   .wd-feature-grid,
   .wd-log-summary,
+  .wd-detail-summary,
+  .wd-instance-meta,
+  .wd-live-side,
   .wd-chat-input {
     grid-template-columns: 1fr;
   }

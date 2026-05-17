@@ -1,20 +1,25 @@
 package com.tony.kingdetective.telegram.handler.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
+import com.tony.kingdetective.bean.dto.SysUserDTO;
 import com.tony.kingdetective.bean.entity.AuditLog;
 import com.tony.kingdetective.bean.entity.OciCreateTask;
 import com.tony.kingdetective.bean.entity.OciUser;
 import com.tony.kingdetective.bean.response.ops.SshHostRsp;
 import com.tony.kingdetective.bean.vo.SystemDiagnostics;
 import com.tony.kingdetective.service.IAuditLogService;
+import com.tony.kingdetective.service.IInstanceService;
 import com.tony.kingdetective.service.IOciCreateTaskService;
 import com.tony.kingdetective.service.IOciUserService;
+import com.tony.kingdetective.service.ISysService;
 import com.tony.kingdetective.service.SystemDiagnosticsService;
 import com.tony.kingdetective.service.ops.SshHostService;
 import com.tony.kingdetective.telegram.builder.KeyboardBuilder;
 import com.tony.kingdetective.telegram.handler.AbstractCallbackHandler;
 import com.tony.kingdetective.utils.CommonUtils;
+import com.tony.kingdetective.utils.VersionUpdateUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
@@ -49,7 +54,11 @@ public class OpsCenterHandler extends AbstractCallbackHandler {
 
     @Override
     public BotApiMethod<? extends Serializable> handle(CallbackQuery callbackQuery, TelegramClient telegramClient) {
-        return buildEditMessage(callbackQuery, "【运维中心】\n\n集中查看系统诊断、任务状态、最近日志，并快速进入常用运维动作。", buildOpsKeyboard());
+        return buildEditMessage(
+                callbackQuery,
+                "【运维中心】\n\n集中查看系统诊断、实例概览、任务状态、日志、版本更新，并快速进入常用运维入口。",
+                buildOpsKeyboard()
+        );
     }
 
     @Override
@@ -61,11 +70,15 @@ public class OpsCenterHandler extends AbstractCallbackHandler {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         rows.add(new InlineKeyboardRow(
                 KeyboardBuilder.button("系统诊断", "ops_diagnostics"),
-                KeyboardBuilder.button("任务状态", "ops_task_status")
+                KeyboardBuilder.button("实例概览", "ops_instance_summary")
+        ));
+        rows.add(new InlineKeyboardRow(
+                KeyboardBuilder.button("任务状态", "ops_task_status"),
+                KeyboardBuilder.button("版本更新", "ops_version_status")
         ));
         rows.add(new InlineKeyboardRow(
                 KeyboardBuilder.button("最近日志", "ops_recent_logs"),
-                KeyboardBuilder.button("日志文件", "log_query")
+                KeyboardBuilder.button("错误日志", "ops_error_logs")
         ));
         rows.add(new InlineKeyboardRow(
                 KeyboardBuilder.button("操作审计", "ops_audit_recent"),
@@ -73,13 +86,13 @@ public class OpsCenterHandler extends AbstractCallbackHandler {
         ));
         rows.add(new InlineKeyboardRow(
                 KeyboardBuilder.button("快捷运维", "ops_quick_actions"),
-                KeyboardBuilder.button("版本信息", "version_info")
+                KeyboardBuilder.button("日志文件", "log_query")
         ));
         rows.add(new InlineKeyboardRow(
                 KeyboardBuilder.button("SSH管理", "ssh_management"),
                 KeyboardBuilder.button("安全管理", "security_management")
         ));
-        rows.add(new InlineKeyboardRow(KeyboardBuilder.button("« 返回主菜单", "back_to_main")));
+        rows.add(new InlineKeyboardRow(KeyboardBuilder.button("返回主菜单", "back_to_main")));
         rows.add(KeyboardBuilder.buildCancelRow());
         return new InlineKeyboardMarkup(rows);
     }
@@ -108,7 +121,7 @@ class OpsDiagnosticsHandler extends AbstractCallbackHandler {
             message.append("磁盘可用: ").append(OpsCenterSupport.formatBytes(diagnostics.getFreeDiskBytes())).append('\n');
             message.append("检查项: OK ").append(ok).append(" / WARN ").append(warn).append(" / ERROR ").append(error).append("\n\n");
 
-            diagnostics.getChecks().stream().limit(12).forEach(item -> message.append(statusIcon(item.getStatus()))
+            diagnostics.getChecks().stream().limit(12).forEach(item -> message.append(item.getStatus())
                     .append(' ').append(item.getName()).append(": ")
                     .append(item.getMessage()).append('\n'));
 
@@ -123,15 +136,87 @@ class OpsDiagnosticsHandler extends AbstractCallbackHandler {
     public String getCallbackPattern() {
         return "ops_diagnostics";
     }
+}
 
-    private String statusIcon(String status) {
-        if ("OK".equals(status)) {
-            return "OK";
+@Slf4j
+@Component
+class OpsInstanceSummaryHandler extends AbstractCallbackHandler {
+
+    private static final int MAX_CONFIG_SCAN = 5;
+
+    @Override
+    public BotApiMethod<? extends Serializable> handle(CallbackQuery callbackQuery, TelegramClient telegramClient) {
+        try {
+            ISysService sysService = SpringUtil.getBean(ISysService.class);
+            IInstanceService instanceService = SpringUtil.getBean(IInstanceService.class);
+            List<SysUserDTO> configs = sysService.list();
+            StringBuilder message = new StringBuilder("【实例概览】\n\n");
+
+            if (CollectionUtil.isEmpty(configs)) {
+                message.append("暂无 OCI 配置。");
+                return buildEditMessage(callbackQuery, message.toString(), OpsCenterHandler.buildOpsKeyboard());
+            }
+
+            int scanCount = Math.min(MAX_CONFIG_SCAN, configs.size());
+            int total = 0;
+            int errors = 0;
+            message.append("配置总数: ").append(configs.size())
+                    .append("，本次扫描: ").append(scanCount).append(" 个\n")
+                    .append("说明: 为避免 Bot 回调超时，仅扫描前 ").append(MAX_CONFIG_SCAN).append(" 个配置。\n\n");
+
+            for (SysUserDTO config : configs.stream().limit(MAX_CONFIG_SCAN).toList()) {
+                try {
+                    List<SysUserDTO.CloudInstance> instances = instanceService.listRunningInstances(config);
+                    total += CollectionUtil.isEmpty(instances) ? 0 : instances.size();
+                    appendConfigInstances(message, config, instances);
+                } catch (Exception e) {
+                    errors++;
+                    message.append("- ").append(OpsCenterSupport.configName(config))
+                            .append(" / ")
+                            .append(OpsCenterSupport.configRegion(config))
+                            .append(": 读取失败，").append(OpsCenterSupport.shorten(e.getMessage(), 90))
+                            .append('\n');
+                }
+            }
+
+            message.insert(message.indexOf("\n\n") + 2, "运行实例: " + total + "，读取失败: " + errors + "\n");
+
+            List<InlineKeyboardRow> rows = new ArrayList<>();
+            rows.add(new InlineKeyboardRow(
+                    KeyboardBuilder.button("刷新实例概览", "ops_instance_summary"),
+                    KeyboardBuilder.button("配置列表", "config_list")
+            ));
+            rows.add(new InlineKeyboardRow(KeyboardBuilder.button("返回运维中心", "ops_center")));
+            rows.add(KeyboardBuilder.buildCancelRow());
+            return buildEditMessage(callbackQuery, OpsCenterSupport.escapeMarkdown(OpsCenterSupport.limitTelegramText(message.toString())), new InlineKeyboardMarkup(rows));
+        } catch (Exception e) {
+            log.error("Telegram instance summary failed", e);
+            return buildEditMessage(callbackQuery, OpsCenterSupport.escapeMarkdown("实例概览读取失败: " + e.getMessage()), OpsCenterHandler.buildOpsKeyboard());
         }
-        if ("ERROR".equals(status)) {
-            return "ERROR";
+    }
+
+    @Override
+    public String getCallbackPattern() {
+        return "ops_instance_summary";
+    }
+
+    private void appendConfigInstances(StringBuilder message, SysUserDTO config, List<SysUserDTO.CloudInstance> instances) {
+        message.append("- ").append(OpsCenterSupport.configName(config))
+                .append(" / ")
+                .append(OpsCenterSupport.configRegion(config))
+                .append(": ")
+                .append(CollectionUtil.isEmpty(instances) ? 0 : instances.size())
+                .append(" 台\n");
+
+        if (CollectionUtil.isNotEmpty(instances)) {
+            instances.stream().limit(3).forEach(instance -> message.append("  ")
+                    .append(OpsCenterSupport.blankToDash(instance.getName()))
+                    .append(" / ")
+                    .append(OpsCenterSupport.blankToDash(instance.getShape()))
+                    .append(" / ")
+                    .append(OpsCenterSupport.joinIps(instance.getPublicIp()))
+                    .append('\n'));
         }
-        return "WARN";
     }
 }
 
@@ -169,7 +254,7 @@ class OpsTaskStatusHandler extends AbstractCallbackHandler {
                 KeyboardBuilder.button("刷新状态", "ops_task_status"),
                 KeyboardBuilder.button("进入任务管理", "task_management")
         ));
-        rows.add(new InlineKeyboardRow(KeyboardBuilder.button("« 返回运维中心", "ops_center")));
+        rows.add(new InlineKeyboardRow(KeyboardBuilder.button("返回运维中心", "ops_center")));
         rows.add(KeyboardBuilder.buildCancelRow());
 
         return buildEditMessage(callbackQuery, OpsCenterSupport.escapeMarkdown(OpsCenterSupport.limitTelegramText(message.toString())), new InlineKeyboardMarkup(rows));
@@ -205,6 +290,43 @@ class OpsTaskStatusHandler extends AbstractCallbackHandler {
 
 @Slf4j
 @Component
+class OpsVersionStatusHandler extends AbstractCallbackHandler {
+
+    @Override
+    public BotApiMethod<? extends Serializable> handle(CallbackQuery callbackQuery, TelegramClient telegramClient) {
+        String current = CommonUtils.getCurrentVersion();
+        String latest = StrUtil.blankToDefault(CommonUtils.getLatestVersion(), current);
+        boolean hasNewVersion = VersionUpdateUtils.hasNewVersion(current, latest);
+
+        StringBuilder message = new StringBuilder("【版本更新】\n\n");
+        message.append("当前版本: ").append(current).append('\n');
+        message.append("最新版本: ").append(latest).append('\n');
+        message.append("Watcher: ").append(VersionUpdateUtils.isWatcherAlive() ? "可用" : "未检测到").append('\n');
+        message.append("状态: ").append(hasNewVersion ? "发现新版本，可点击更新。" : "当前已是最新版本。").append('\n');
+        message.append("触发文件: ").append(VersionUpdateUtils.TRIGGER_FILE_PATH).append('\n');
+
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        if (hasNewVersion) {
+            rows.add(new InlineKeyboardRow(KeyboardBuilder.button("立即更新", "update_sys_version")));
+        }
+        rows.add(new InlineKeyboardRow(
+                KeyboardBuilder.button("重新检测", "ops_version_status"),
+                KeyboardBuilder.button("版本详情", "version_info")
+        ));
+        rows.add(new InlineKeyboardRow(KeyboardBuilder.button("返回运维中心", "ops_center")));
+        rows.add(KeyboardBuilder.buildCancelRow());
+
+        return buildEditMessage(callbackQuery, OpsCenterSupport.escapeMarkdown(message.toString()), new InlineKeyboardMarkup(rows));
+    }
+
+    @Override
+    public String getCallbackPattern() {
+        return "ops_version_status";
+    }
+}
+
+@Slf4j
+@Component
 class OpsRecentLogsHandler extends AbstractCallbackHandler {
 
     private static final int MAX_LINES = 30;
@@ -230,7 +352,7 @@ class OpsRecentLogsHandler extends AbstractCallbackHandler {
                 KeyboardBuilder.button("刷新", "ops_recent_logs"),
                 KeyboardBuilder.button("发送日志文件", "log_query")
         ));
-        rows.add(new InlineKeyboardRow(KeyboardBuilder.button("« 返回运维中心", "ops_center")));
+        rows.add(new InlineKeyboardRow(KeyboardBuilder.button("返回运维中心", "ops_center")));
         rows.add(KeyboardBuilder.buildCancelRow());
 
         return buildEditMessage(callbackQuery, OpsCenterSupport.escapeMarkdown(OpsCenterSupport.limitTelegramText(message.toString())), new InlineKeyboardMarkup(rows));
@@ -241,7 +363,7 @@ class OpsRecentLogsHandler extends AbstractCallbackHandler {
         return "ops_recent_logs";
     }
 
-    private List<String> readLastLines(File logFile, int limit) {
+    static List<String> readLastLines(File logFile, int limit) {
         LinkedList<String> lines = new LinkedList<>();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(logFile), StandardCharsets.UTF_8))) {
             String line;
@@ -257,6 +379,54 @@ class OpsRecentLogsHandler extends AbstractCallbackHandler {
             lines.add("读取日志失败: " + e.getMessage());
         }
         return lines;
+    }
+}
+
+@Slf4j
+@Component
+class OpsErrorLogsHandler extends AbstractCallbackHandler {
+
+    private static final int MAX_LINES = 25;
+
+    @Override
+    public BotApiMethod<? extends Serializable> handle(CallbackQuery callbackQuery, TelegramClient telegramClient) {
+        File logFile = new File(CommonUtils.LOG_FILE_PATH);
+        if (!logFile.exists()) {
+            return buildEditMessage(callbackQuery, OpsCenterSupport.escapeMarkdown("【错误日志】\n\n日志文件不存在: " + CommonUtils.LOG_FILE_PATH), OpsCenterHandler.buildOpsKeyboard());
+        }
+
+        List<String> importantLines = OpsRecentLogsHandler.readLastLines(logFile, 500).stream()
+                .filter(this::isImportant)
+                .toList();
+        List<String> lines = importantLines.stream()
+                .skip(Math.max(0, importantLines.size() - MAX_LINES))
+                .toList();
+
+        StringBuilder message = new StringBuilder("【错误日志】\n");
+        message.append("生成时间: ").append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).append("\n\n");
+        if (lines.isEmpty()) {
+            message.append("最近没有 WARN / ERROR / Exception 日志。");
+        } else {
+            lines.forEach(line -> message.append(OpsCenterSupport.shorten(line, 180)).append('\n'));
+        }
+
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(new InlineKeyboardRow(
+                KeyboardBuilder.button("刷新错误日志", "ops_error_logs"),
+                KeyboardBuilder.button("完整日志文件", "log_query")
+        ));
+        rows.add(new InlineKeyboardRow(KeyboardBuilder.button("返回运维中心", "ops_center")));
+        rows.add(KeyboardBuilder.buildCancelRow());
+        return buildEditMessage(callbackQuery, OpsCenterSupport.escapeMarkdown(OpsCenterSupport.limitTelegramText(message.toString())), new InlineKeyboardMarkup(rows));
+    }
+
+    @Override
+    public String getCallbackPattern() {
+        return "ops_error_logs";
+    }
+
+    private boolean isImportant(String line) {
+        return line != null && (line.contains(" WARN ") || line.contains(" ERROR ") || line.contains("Exception"));
     }
 }
 
@@ -373,22 +543,22 @@ class OpsQuickActionsHandler extends AbstractCallbackHandler {
                 KeyboardBuilder.button("任务管理", "task_management")
         ));
         rows.add(new InlineKeyboardRow(
-                KeyboardBuilder.button("SSH管理", "ssh_management"),
+                KeyboardBuilder.button("实例概览", "ops_instance_summary"),
                 KeyboardBuilder.button("开放端口", "open_all_ports_select")
         ));
         rows.add(new InlineKeyboardRow(
+                KeyboardBuilder.button("SSH管理", "ssh_management"),
+                KeyboardBuilder.button("安全管理", "security_management")
+        ));
+        rows.add(new InlineKeyboardRow(
                 KeyboardBuilder.button("系统诊断", "ops_diagnostics"),
-                KeyboardBuilder.button("最近日志", "ops_recent_logs")
+                KeyboardBuilder.button("错误日志", "ops_error_logs")
         ));
         rows.add(new InlineKeyboardRow(
-                KeyboardBuilder.button("操作审计", "ops_audit_recent"),
-                KeyboardBuilder.button("主机概览", "ops_host_list")
-        ));
-        rows.add(new InlineKeyboardRow(
-                KeyboardBuilder.button("版本信息", "version_info"),
+                KeyboardBuilder.button("版本更新", "ops_version_status"),
                 KeyboardBuilder.button("备份恢复", "backup_restore")
         ));
-        rows.add(new InlineKeyboardRow(KeyboardBuilder.button("« 返回运维中心", "ops_center")));
+        rows.add(new InlineKeyboardRow(KeyboardBuilder.button("返回运维中心", "ops_center")));
         rows.add(KeyboardBuilder.buildCancelRow());
 
         return buildEditMessage(
@@ -411,6 +581,21 @@ final class OpsCenterSupport {
 
     static String blankToDash(String value) {
         return value == null || value.isBlank() ? "-" : value;
+    }
+
+    static String configName(SysUserDTO config) {
+        return config == null ? "-" : blankToDash(config.getUsername());
+    }
+
+    static String configRegion(SysUserDTO config) {
+        return config == null || config.getOciCfg() == null ? "-" : blankToDash(config.getOciCfg().getRegion());
+    }
+
+    static String joinIps(List<String> ips) {
+        if (CollectionUtil.isEmpty(ips)) {
+            return "-";
+        }
+        return ips.stream().filter(StrUtil::isNotBlank).collect(Collectors.joining(", "));
     }
 
     static String formatDuration(Long seconds) {

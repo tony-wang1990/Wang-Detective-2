@@ -24,7 +24,7 @@ import java.util.List;
 import static java.lang.Math.toIntExact;
 
 /**
- * 版本信息基础处理器（共享逻辑）
+ * 版本信息基础处理器（共享逻辑）。
  *
  * @author yohann
  */
@@ -44,22 +44,23 @@ public abstract class VersionInfoBaseHandler extends AbstractCallbackHandler {
                 .append("【版本信息】\n\n")
                 .append("当前版本：").append(now).append('\n')
                 .append("最新版本：").append(latest).append('\n')
-                .append("状态：").append(hasNewVersion ? "发现新版本，可点击下方按钮更新" : "当前已是最新版本").append("\n\n");
+                .append("Watcher：").append(VersionUpdateUtils.isWatcherAlive() ? "可用" : "未检测到").append('\n')
+                .append("状态：").append(hasNewVersion ? "发现新版本，可点击下方按钮更新" : "当前已经是最新版本").append("\n\n");
 
         List<InlineKeyboardRow> keyboard = new ArrayList<>();
         if (hasNewVersion) {
             String releaseNotes = StrUtil.blankToDefault(CommonUtils.getLatestVersionBody(), "暂无更新说明");
             content.append("更新内容：\n").append(releaseNotes);
             keyboard.add(new InlineKeyboardRow(
-                    KeyboardBuilder.button("🔄 点击更新到最新版本", "update_sys_version")
+                    KeyboardBuilder.button("点击更新到最新版本", "update_sys_version")
             ));
             keyboard.add(new InlineKeyboardRow(
-                    KeyboardBuilder.button("🔍 重新检测版本", "version_info")
+                    KeyboardBuilder.button("重新检测版本", "version_info")
             ));
             keyboard.add(KeyboardBuilder.buildCancelRow());
         } else {
             keyboard.add(new InlineKeyboardRow(
-                    KeyboardBuilder.button("🔍 重新检测版本", "version_info")
+                    KeyboardBuilder.button("重新检测版本", "version_info")
             ));
             keyboard.addAll(KeyboardBuilder.buildMainMenu());
         }
