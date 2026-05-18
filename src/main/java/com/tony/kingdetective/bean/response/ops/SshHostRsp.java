@@ -17,6 +17,7 @@ public class SshHostRsp {
     private Boolean hasPassword;
     private Boolean hasPrivateKey;
     private String tags;
+    private String hostGroup;
     private String description;
     private LocalDateTime lastUsedAt;
     private LocalDateTime createTime;

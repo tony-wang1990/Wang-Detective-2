@@ -26,5 +26,7 @@ public class SshHostSaveParams {
 
     private String tags;
 
+    private String hostGroup;
+
     private String description;
 }

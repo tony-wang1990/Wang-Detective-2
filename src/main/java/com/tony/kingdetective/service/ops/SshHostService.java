@@ -28,6 +28,10 @@ public class SshHostService {
     }
 
     public List<SshHostRsp> list(String keyword) {
+        return list(keyword, null);
+    }
+
+    public List<SshHostRsp> list(String keyword, String hostGroup) {
         LambdaQueryWrapper<SshHost> wrapper = new LambdaQueryWrapper<SshHost>()
                 .orderByDesc(SshHost::getUpdateTime)
                 .orderByDesc(SshHost::getCreateTime);
@@ -39,7 +43,12 @@ public class SshHostService {
                     .or()
                     .like(SshHost::getUsername, value)
                     .or()
-                    .like(SshHost::getTags, value));
+                    .like(SshHost::getTags, value)
+                    .or()
+                    .like(SshHost::getHostGroup, value));
+        }
+        if (StrUtil.isNotBlank(hostGroup)) {
+            wrapper.eq(SshHost::getHostGroup, hostGroup.trim());
         }
         return sshHostMapper.selectList(wrapper).stream().map(this::toRsp).toList();
     }
@@ -103,6 +112,7 @@ public class SshHostService {
         host.setUsername(params.getUsername().trim());
         host.setAuthType(authType);
         host.setTags(StrUtil.emptyToNull(StrUtil.trim(params.getTags())));
+        host.setHostGroup(StrUtil.blankToDefault(StrUtil.trim(params.getHostGroup()), "默认分组"));
         host.setDescription(StrUtil.emptyToNull(StrUtil.trim(params.getDescription())));
         host.setUpdateTime(LocalDateTime.now());
 
@@ -173,6 +183,7 @@ public class SshHostService {
                 .hasPassword(StrUtil.isNotBlank(host.getPasswordCipher()))
                 .hasPrivateKey(StrUtil.isNotBlank(host.getPrivateKeyCipher()))
                 .tags(host.getTags())
+                .hostGroup(StrUtil.blankToDefault(host.getHostGroup(), "默认分组"))
                 .description(host.getDescription())
                 .lastUsedAt(host.getLastUsedAt())
                 .createTime(host.getCreateTime())

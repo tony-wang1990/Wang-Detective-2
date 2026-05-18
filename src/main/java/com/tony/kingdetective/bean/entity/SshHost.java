@@ -35,6 +35,9 @@ public class SshHost {
 
     private String tags;
 
+    @TableField("host_group")
+    private String hostGroup;
+
     private String description;
 
     @TableField("last_used_at")

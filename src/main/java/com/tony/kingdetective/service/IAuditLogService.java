@@ -39,4 +39,8 @@ public interface IAuditLogService {
     void logFailure(String userId, String operation, String target, String error);
 
     List<AuditLog> recent(int limit);
+
+    List<AuditLog> search(String keyword, Boolean success, String operation, int limit);
+
+    String exportCsv(String keyword, Boolean success, String operation, int limit);
 }

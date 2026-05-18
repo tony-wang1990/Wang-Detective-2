@@ -1,6 +1,7 @@
 package com.tony.kingdetective.service.impl;
 
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.jwt.JWTUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.tony.kingdetective.bean.entity.AuditLog;
@@ -61,10 +62,54 @@ public class AuditLogServiceImpl implements IAuditLogService {
 
     @Override
     public List<AuditLog> recent(int limit) {
+        return search(null, null, null, limit);
+    }
+
+    @Override
+    public List<AuditLog> search(String keyword, Boolean success, String operation, int limit) {
         int size = limit <= 0 ? 100 : Math.min(limit, 500);
-        return auditLogMapper.selectList(new LambdaQueryWrapper<AuditLog>()
+        LambdaQueryWrapper<AuditLog> wrapper = new LambdaQueryWrapper<AuditLog>()
                 .orderByDesc(AuditLog::getCreateTime)
-                .last("LIMIT " + size));
+                .last("LIMIT " + size);
+        if (success != null) {
+            wrapper.eq(AuditLog::getSuccess, success);
+        }
+        if (StrUtil.isNotBlank(operation)) {
+            wrapper.like(AuditLog::getOperation, operation.trim());
+        }
+        if (StrUtil.isNotBlank(keyword)) {
+            String word = keyword.trim();
+            wrapper.and(w -> w.like(AuditLog::getOperation, word)
+                    .or()
+                    .like(AuditLog::getTarget, word)
+                    .or()
+                    .like(AuditLog::getDetails, word)
+                    .or()
+                    .like(AuditLog::getErrorMessage, word)
+                    .or()
+                    .like(AuditLog::getIpAddress, word)
+                    .or()
+                    .like(AuditLog::getUsername, word)
+                    .or()
+                    .like(AuditLog::getUserId, word));
+        }
+        return auditLogMapper.selectList(wrapper);
+    }
+
+    @Override
+    public String exportCsv(String keyword, Boolean success, String operation, int limit) {
+        StringBuilder csv = new StringBuilder();
+        csv.append("time,success,operation,target,user,ip,details,error\n");
+        search(keyword, success, operation, limit).forEach(item -> csv
+                .append(csv(item.getCreateTime() == null ? "" : item.getCreateTime().toString())).append(',')
+                .append(csv(Boolean.TRUE.equals(item.getSuccess()) ? "success" : "failure")).append(',')
+                .append(csv(item.getOperation())).append(',')
+                .append(csv(item.getTarget())).append(',')
+                .append(csv(StrUtil.blankToDefault(item.getUsername(), item.getUserId()))).append(',')
+                .append(csv(item.getIpAddress())).append(',')
+                .append(csv(item.getDetails())).append(',')
+                .append(csv(item.getErrorMessage())).append('\n'));
+        return csv.toString();
     }
 
     private AuditLog base(String userId, String operation, String target) {
@@ -116,5 +161,10 @@ public class AuditLogServiceImpl implements IAuditLogService {
             ip = request.getRemoteAddr();
         }
         return ip != null && ip.contains(",") ? ip.split(",")[0].trim() : ip;
+    }
+
+    private String csv(String value) {
+        String text = value == null ? "" : value;
+        return "\"" + text.replace("\"", "\"\"") + "\"";
     }
 }

@@ -64,6 +64,7 @@ backup/
 *.bak
 *.tmp
 *.temp
+.tools/
 
 # ==========================
 # OCI Keys & Certificates

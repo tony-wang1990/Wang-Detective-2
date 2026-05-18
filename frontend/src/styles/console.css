@@ -831,6 +831,11 @@ html.dark .wd-leaflet-map .leaflet-tile {
   color: #b45309;
 }
 
+.wd-badge.danger {
+  background: color-mix(in srgb, var(--wd-danger) 16%, var(--wd-surface));
+  color: var(--wd-danger);
+}
+
 .wd-badge.muted {
   background: var(--wd-surface-2);
   color: var(--wd-muted);
@@ -1217,6 +1222,66 @@ html.dark .wd-leaflet-map .leaflet-tile {
   color: var(--wd-danger);
 }
 
+.wd-compact-select {
+  min-height: 36px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--wd-surface);
+  color: var(--wd-text);
+  font-weight: 800;
+}
+
+.wd-risk-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, .34fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.wd-risk-list {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.wd-risk-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  background: var(--wd-surface-2);
+}
+
+.wd-risk-item b,
+.wd-risk-item p,
+.wd-risk-item small {
+  display: block;
+}
+
+.wd-risk-item p {
+  margin: 5px 0;
+  color: var(--wd-text);
+  line-height: 1.7;
+}
+
+.wd-risk-item small {
+  color: var(--wd-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wd-risk-empty {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  color: var(--wd-muted);
+  font-weight: 900;
+}
+
 .wd-ops-grid {
   display: grid;
   grid-template-columns: 360px minmax(0, 1fr);
@@ -1268,6 +1333,36 @@ html.dark .wd-leaflet-map .leaflet-tile {
 .wd-template-bar button.ghost {
   background: var(--wd-surface);
   color: var(--wd-muted);
+}
+
+.wd-template-save {
+  display: grid;
+  grid-template-columns: minmax(180px, .7fr) minmax(120px, .3fr) auto;
+  gap: 8px;
+  padding: 10px 14px 0;
+}
+
+.wd-template-save input {
+  min-height: 34px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--wd-surface);
+  color: var(--wd-text);
+}
+
+.wd-template-save button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--wd-surface);
+  color: var(--wd-text);
+  font-weight: 900;
 }
 
 .wd-command-row.terminal-input-row {
@@ -1955,6 +2050,7 @@ html.dark .wd-leaflet-map .leaflet-tile {
   .wd-chart-row,
   .wd-kpis,
   .wd-split,
+  .wd-risk-grid,
   .wd-ops-grid,
   .wd-form-grid,
   .wd-feature-grid,

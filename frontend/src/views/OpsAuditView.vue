@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { CheckCircle2, Clock3, Filter, RefreshCw, Search, ShieldCheck, XCircle } from 'lucide-vue-next';
+import { CheckCircle2, Clock3, Download, Filter, RefreshCw, Search, ShieldCheck, XCircle } from 'lucide-vue-next';
 import { opsGet } from '../api/http';
 
 type AuditLog = {
@@ -25,6 +25,20 @@ const statusFilter = ref<'all' | 'success' | 'failure'>('all');
 const limit = ref(100);
 const selectedId = ref('');
 const lastLoadedAt = ref('');
+
+function buildQuery(exportMode = false) {
+  const params = new URLSearchParams();
+  params.set('limit', String(exportMode ? Math.max(limit.value, 1000) : limit.value));
+  if (keyword.value.trim()) {
+    params.set('keyword', keyword.value.trim());
+  }
+  if (statusFilter.value === 'success') {
+    params.set('success', 'true');
+  } else if (statusFilter.value === 'failure') {
+    params.set('success', 'false');
+  }
+  return params.toString();
+}
 
 const filteredLogs = computed(() => {
   const word = keyword.value.trim().toLowerCase();
@@ -91,12 +105,36 @@ async function loadAudits() {
   loading.value = true;
   error.value = '';
   try {
-    const res = await opsGet<AuditLog[]>(`/audit/recent?limit=${limit.value}`);
+    const res = await opsGet<AuditLog[]>(`/audit/search?${buildQuery(false)}`);
     logs.value = res.data || [];
     selectedId.value = logs.value[0]?.id || '';
     lastLoadedAt.value = new Date().toLocaleTimeString();
   } catch (err) {
     error.value = err instanceof Error ? err.message : '读取审计日志失败';
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function exportAudits() {
+  loading.value = true;
+  error.value = '';
+  try {
+    const response = await fetch(`/api/ops/audit/export?${buildQuery(true)}`, {
+      headers: sessionStorage.getItem('token') ? { Authorization: `Bearer ${sessionStorage.getItem('token')}` } : {}
+    });
+    if (!response.ok) {
+      throw new Error(await response.text() || `export ${response.status}`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `wang-detective-audit-${Date.now()}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '导出审计日志失败';
   } finally {
     loading.value = false;
   }
@@ -113,6 +151,9 @@ onMounted(loadAudits);
         <p>关键运维动作、SSH/SFTP 操作、执行结果和来源 IP 的集中追踪。</p>
       </div>
       <div class="wd-actions">
+        <button type="button" class="ghost" @click="exportAudits" :disabled="loading">
+          <Download :size="16" />导出 CSV
+        </button>
         <button type="button" @click="loadAudits" :disabled="loading">
           <RefreshCw :size="16" />{{ loading ? '刷新中' : '刷新' }}
         </button>
@@ -147,9 +188,9 @@ onMounted(loadAudits);
           <div class="wd-table-tools">
             <label class="wd-inline-search">
               <Search :size="15" />
-              <input v-model="keyword" placeholder="搜索操作、目标、用户、IP..." />
+              <input v-model="keyword" placeholder="搜索操作、目标、用户、IP..." @keyup.enter="loadAudits" />
             </label>
-            <select v-model="statusFilter">
+            <select v-model="statusFilter" @change="loadAudits">
               <option value="all">全部状态</option>
               <option value="success">成功</option>
               <option value="failure">失败</option>

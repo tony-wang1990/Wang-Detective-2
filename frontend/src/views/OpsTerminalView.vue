@@ -11,6 +11,7 @@ type Host = {
   username?: string;
   authType?: string;
   tags?: string;
+  hostGroup?: string;
 };
 
 type SshSession = {
@@ -43,6 +44,15 @@ type SftpEntry = {
   modifiedTime?: number;
 };
 
+type CommandTemplate = {
+  id?: string;
+  name?: string;
+  command?: string;
+  category?: string;
+  description?: string;
+  riskLevel?: string;
+};
+
 const hosts = ref<Host[]>([]);
 const selectedHostId = ref('');
 const status = ref('');
@@ -58,6 +68,9 @@ const terminalCols = ref(120);
 const terminalRows = ref(32);
 const command = ref('uname -a && uptime');
 const commandHistory = ref<string[]>([]);
+const commandTemplates = ref<CommandTemplate[]>([]);
+const templateName = ref('');
+const templateCategory = ref('常用');
 const sftpPath = ref('.');
 const sftpEntries = ref<SftpEntry[]>([]);
 const selectedSftpPath = ref('');
@@ -71,6 +84,7 @@ const uploadFileInput = ref<HTMLInputElement | null>(null);
 const form = reactive({
   name: '',
   tags: '',
+  hostGroup: '默认分组',
   host: '',
   port: 22,
   username: 'root',
@@ -82,14 +96,8 @@ const form = reactive({
 let terminalWs: WebSocket | null = null;
 let resizeTimer: number | undefined;
 
-const commandTemplates = [
-  { label: '系统概览', value: 'uname -a && uptime && free -h && df -h' },
-  { label: 'Docker 状态', value: 'docker ps --format "table {{.Names}}\\t{{.Status}}\\t{{.Ports}}" && docker stats --no-stream' },
-  { label: '应用日志', value: 'tail -n 120 /var/log/king-detective.log' },
-  { label: '端口监听', value: 'ss -tulpn | grep -E ":80|:443|:9527" || true' }
-];
-
 const currentHost = computed(() => hosts.value.find((host) => host.id === selectedHostId.value));
+const hostGroups = computed(() => Array.from(new Set(hosts.value.map((item) => item.hostGroup || '默认分组'))));
 const terminalConnected = ref(false);
 
 function credential() {
@@ -159,6 +167,7 @@ function fillHost(host: Host) {
   selectedHostId.value = host.id || '';
   form.name = host.name || '';
   form.tags = host.tags || '';
+  form.hostGroup = host.hostGroup || '默认分组';
   form.host = host.host || '';
   form.port = Number(host.port || 22);
   form.username = host.username || 'root';
@@ -182,6 +191,37 @@ function rememberCommand(value: string) {
 
 function applyCommand(value: string) {
   command.value = value;
+}
+
+async function loadCommandTemplates() {
+  try {
+    const res = await opsGet<CommandTemplate[]>('/templates');
+    commandTemplates.value = res.data || [];
+  } catch (error) {
+    status.value = errorMessage(error);
+  }
+}
+
+async function saveCommandTemplate() {
+  const name = templateName.value.trim() || command.value.trim().split(/\s+/).slice(0, 4).join(' ');
+  if (!name || !command.value.trim()) {
+    status.value = '请先填写模板名称和命令';
+    return;
+  }
+  status.value = '保存命令模板中';
+  try {
+    await opsPost('/templates', {
+      name,
+      command: command.value,
+      category: templateCategory.value || '常用',
+      riskLevel: command.value.includes('rm ') || command.value.includes('docker rm') ? 'HIGH' : 'LOW'
+    });
+    templateName.value = '';
+    await loadCommandTemplates();
+    status.value = '命令模板已保存';
+  } catch (error) {
+    status.value = errorMessage(error);
+  }
 }
 
 async function loadHosts() {
@@ -587,6 +627,7 @@ async function renameSftpPath() {
 onMounted(() => {
   loadHosts();
   loadSessions();
+  loadCommandTemplates();
   loadCommandHistory();
   window.addEventListener('resize', scheduleAutoResize);
 });
@@ -624,6 +665,13 @@ onBeforeUnmount(() => {
             </select>
           </label>
           <label><span>主机名称</span><input v-model="form.name" placeholder="例如 tokyo-a1" /></label>
+          <label>
+            <span>主机分组</span>
+            <input v-model="form.hostGroup" list="host-groups" placeholder="默认分组 / 生产 / 测试" />
+            <datalist id="host-groups">
+              <option v-for="group in hostGroups" :key="group" :value="group" />
+            </datalist>
+          </label>
           <label><span>标签</span><input v-model="form.tags" placeholder="oci,prod,tokyo" /></label>
           <div class="wd-two">
             <label><span>主机</span><input v-model="form.host" placeholder="1.2.3.4" /></label>
@@ -654,12 +702,17 @@ onBeforeUnmount(() => {
           </header>
           <div class="wd-template-bar">
             <span><ListChecks :size="15" />模板</span>
-            <button v-for="item in commandTemplates" :key="item.label" type="button" @click="applyCommand(item.value)">
-              {{ item.label }}
+            <button v-for="item in commandTemplates" :key="item.id || item.name" type="button" @click="applyCommand(item.command || '')">
+              {{ item.name }}
             </button>
             <button v-for="item in commandHistory" :key="item" type="button" class="ghost" @click="applyCommand(item)">
               {{ item.length > 18 ? `${item.slice(0, 18)}...` : item }}
             </button>
+          </div>
+          <div class="wd-template-save">
+            <input v-model="templateName" placeholder="保存为模板名称" />
+            <input v-model="templateCategory" placeholder="分类" />
+            <button type="button" class="ghost" @click="saveCommandTemplate"><Save :size="15" />保存模板</button>
           </div>
           <div class="wd-command-row">
             <input v-model="command" placeholder="输入命令" @keyup.enter="execCommand" />

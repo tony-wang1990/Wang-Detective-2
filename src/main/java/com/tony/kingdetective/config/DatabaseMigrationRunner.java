@@ -53,6 +53,12 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
                 log.info("运维 SSH 主机资产表迁移完成");
             }
 
+            if (!tableExists(conn, "ops_command_template") || !columnExists(conn, "ops_ssh_host", "host_group")) {
+                log.info("检测到运维脚本工具箱表结构缺失，开始执行 v4.2 迁移...");
+                executeMigrationScript(stmt, "db/migration_v4_2_ops_toolbox.sql");
+                log.info("运维脚本工具箱表结构迁移完成");
+            }
+
         } catch (Exception e) {
             log.error("❌ 数据库迁移失败", e);
             // 不抛出异常，允许应用继续启动
@@ -71,6 +77,18 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
              ResultSet rs = stmt.executeQuery(sql)) {
             return rs.next();
         }
+    }
+
+    private boolean columnExists(Connection conn, String tableName, String columnName) throws Exception {
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA table_info(" + tableName + ")")) {
+            while (rs.next()) {
+                if (columnName.equalsIgnoreCase(rs.getString("name"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
     
     /**

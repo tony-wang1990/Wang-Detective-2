@@ -56,8 +56,9 @@ public class OpsSshController {
     }
 
     @GetMapping("/ssh/hosts")
-    public ResponseData<List<SshHostRsp>> hosts(@RequestParam(value = "keyword", required = false) String keyword) {
-        return ResponseData.successData(sshHostService.list(keyword));
+    public ResponseData<List<SshHostRsp>> hosts(@RequestParam(value = "keyword", required = false) String keyword,
+                                                @RequestParam(value = "group", required = false) String group) {
+        return ResponseData.successData(sshHostService.list(keyword, group));
     }
 
     @GetMapping("/ssh/hosts/{id}")

@@ -61,6 +61,7 @@ bash scripts/server-smoke-test.sh
 - 2026-05-18 继续完成前端交互打磨：资源页真实 OCI 高危操作、任务停止/批量停止和顶部版本更新均改为页面内确认弹窗/状态提示，移除浏览器原生 `prompt/confirm/alert`；TGBOT 启动和诊断新增 `TELEGRAM_CHAT_ID` 环境变量兜底，减少“已配置但误报未配置”的情况。
 - 2026-05-18 新增服务器部署冒烟检查：`scripts/server-smoke-test.sh` 可在 VPS 上检查 Docker/Compose、配置文件、容器健康、watcher 心跳、Web 登录、诊断、版本、配置/任务分页、运维主机、操作审计和前端路由；真实 OCI 改动项整理到验收清单，避免部署后靠截图猜问题。
 - 2026-05-18 补齐服务器运维脚本工具箱：安装脚本会同步 `backup.sh`、`restore.sh`、`update.sh`、`rollback.sh`、`support-bundle.sh`、`maintenance.sh`、`setup-backup-cron.sh` 和 `verify-release.sh`，先把后续规划需要的脚本基础铺完整。
+- 2026-05-18 大版本继续补齐可发布能力：新增 OCI 风险看板、Object Storage 备份归档、审计搜索/CSV 导出、SSH 主机分组、可维护命令模板、TGBOT 风险/备份入口，并同步重构前端生产包。
 
 当前仍未完成、后续必须重点推进：
 
@@ -103,6 +104,31 @@ npm --prefix frontend run build
 - 实例列表增加批量选择和批量操作策略，例如批量启动/停止/改名模板/批量换 IP。
 - TGBOT 下一步可继续做“选择配置 -> 选择实例 -> 执行动作”的完整实例操作向导，目前本版本优先完成运维中心概览和跳转入口。
 - 本机或 CI 继续补充 Java 编译与后端单元测试，重点覆盖 TGBOT 新增 handler、版本更新链路和 OCI 参数映射。
+
+## 2026-05-18 大版本续更：风险、备份和运维产品化
+
+本次续更继续围绕“真实可用、可审计、可维护”推进，不再新增孤立入口。
+
+新增能力：
+
+- 新增 `/dashboard/risk` 风险看板：后端实时扫描 OCI 配置、实例状态、ARM 免费资源、引导卷容量和安全列表公网入站规则，并标记 HIGH/WARN/ERROR 风险。
+- 新增 `/api/v1/oci/risk` 风险接口，可供 Web 和 TGBOT 共同调用。
+- 新增 `/dashboard/backups` 备份归档：可把 `.env`、`application.yml`、`docker-compose.yml`、`data/`、`keys/`、`scripts/` 打包成本地 ZIP，并按需上传到 OCI Object Storage。
+- 新增 `/api/v1/backups/*`：支持列出 Bucket、列出归档对象、创建本地/对象存储备份、删除对象存储归档。
+- 操作审计升级：新增后端搜索接口 `/api/ops/audit/search` 和 CSV 导出接口 `/api/ops/audit/export`，前端页面改为调用后端过滤并支持导出。
+- 运维终端升级：SSH 主机库新增 `hostGroup` 分组字段；命令模板改为数据库维护，前端可直接保存当前命令为模板。
+- 数据库迁移升级：新增 `migration_v4_2_ops_toolbox.sql`，自动补 `ops_ssh_host.host_group` 和 `ops_command_template` 表，并内置常用命令模板。
+- TGBOT 运维中心升级：新增“风险看板”和“备份归档”入口，快捷运维菜单也同步接入。
+- 前端菜单顺序继续调整为：主页、配置列表、任务列表、风险看板、备份归档、功能中心、运维终端、AI 聊天室、服务日志、操作审计、系统配置。
+
+本次验证：
+
+```bash
+npm --prefix frontend run build
+git diff --check
+```
+
+说明：本机 Windows 环境没有全局 Java/Maven，Chocolatey 全局安装因非管理员权限失败；尝试便携 JDK 下载时网络速度过慢已中止。因此后端 Java 编译需要继续依赖 GitHub Actions 或服务器环境验证。前端 TypeScript/Vite 构建已通过。
 
 ## 数据目录
 

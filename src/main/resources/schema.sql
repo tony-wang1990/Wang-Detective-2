@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS `ops_ssh_host` (
     private_key_cipher TEXT,
     passphrase_cipher TEXT,
     tags TEXT,
+    host_group TEXT DEFAULT '默认分组',
     description TEXT,
     last_used_at DATETIME,
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -137,3 +138,18 @@ CREATE TABLE IF NOT EXISTS `ops_ssh_host` (
 CREATE INDEX if not exists idx_ops_ssh_host_name ON ops_ssh_host(name);
 CREATE INDEX if not exists idx_ops_ssh_host_host ON ops_ssh_host(host);
 CREATE INDEX if not exists idx_ops_ssh_host_update_time ON ops_ssh_host(update_time);
+
+-- Ops 命令模板表
+CREATE TABLE IF NOT EXISTS `ops_command_template` (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    command TEXT NOT NULL,
+    category TEXT DEFAULT '常用',
+    description TEXT,
+    risk_level TEXT DEFAULT 'LOW',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX if not exists idx_ops_command_template_name ON ops_command_template(name);
+CREATE INDEX if not exists idx_ops_command_template_category ON ops_command_template(category);
+CREATE INDEX if not exists idx_ops_command_template_update_time ON ops_command_template(update_time);

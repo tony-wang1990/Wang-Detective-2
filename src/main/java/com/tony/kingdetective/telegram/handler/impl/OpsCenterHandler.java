@@ -7,6 +7,7 @@ import com.tony.kingdetective.bean.dto.SysUserDTO;
 import com.tony.kingdetective.bean.entity.AuditLog;
 import com.tony.kingdetective.bean.entity.OciCreateTask;
 import com.tony.kingdetective.bean.entity.OciUser;
+import com.tony.kingdetective.bean.response.oci.risk.OciRiskReportRsp;
 import com.tony.kingdetective.bean.response.ops.SshHostRsp;
 import com.tony.kingdetective.bean.vo.SystemDiagnostics;
 import com.tony.kingdetective.service.IAuditLogService;
@@ -16,6 +17,8 @@ import com.tony.kingdetective.service.IOciUserService;
 import com.tony.kingdetective.service.ISysService;
 import com.tony.kingdetective.service.SystemDiagnosticsService;
 import com.tony.kingdetective.service.ops.SshHostService;
+import com.tony.kingdetective.service.oci.ObjectStorageBackupService;
+import com.tony.kingdetective.service.oci.OciRiskService;
 import com.tony.kingdetective.telegram.builder.KeyboardBuilder;
 import com.tony.kingdetective.telegram.handler.AbstractCallbackHandler;
 import com.tony.kingdetective.utils.CommonUtils;
@@ -83,6 +86,10 @@ public class OpsCenterHandler extends AbstractCallbackHandler {
         rows.add(new InlineKeyboardRow(
                 KeyboardBuilder.button("操作审计", "ops_audit_recent"),
                 KeyboardBuilder.button("主机概览", "ops_host_list")
+        ));
+        rows.add(new InlineKeyboardRow(
+                KeyboardBuilder.button("风险看板", "ops_risk_summary"),
+                KeyboardBuilder.button("备份归档", "ops_backup_archive")
         ));
         rows.add(new InlineKeyboardRow(
                 KeyboardBuilder.button("快捷运维", "ops_quick_actions"),
@@ -528,6 +535,107 @@ class OpsHostListHandler extends AbstractCallbackHandler {
     }
 }
 
+@Slf4j
+@Component
+class OpsRiskSummaryHandler extends AbstractCallbackHandler {
+
+    @Override
+    public BotApiMethod<? extends Serializable> handle(CallbackQuery callbackQuery, TelegramClient telegramClient) {
+        try {
+            OciRiskService riskService = SpringUtil.getBean(OciRiskService.class);
+            OciRiskReportRsp report = riskService.report(5);
+            OciRiskReportRsp.Summary summary = report.getSummary();
+
+            StringBuilder message = new StringBuilder("【OCI 风险看板】\n\n");
+            message.append("扫描配置: ").append(summary.getScannedConfigCount()).append('/').append(summary.getConfigCount()).append('\n');
+            message.append("实例: ").append(summary.getRunningInstanceCount()).append(" 运行 / ")
+                    .append(summary.getInstanceCount()).append(" 总计\n");
+            message.append("ARM: ").append(summary.getArmOcpus()).append(" OCPU / ")
+                    .append(summary.getArmMemoryGb()).append(" GB\n");
+            message.append("引导卷: ").append(summary.getBootVolumeGb()).append(" GB\n");
+            message.append("风险: HIGH ").append(summary.getHighRiskCount())
+                    .append(" / WARN ").append(summary.getWarnRiskCount())
+                    .append(" / ERROR ").append(summary.getErrorConfigCount()).append("\n\n");
+
+            if (CollectionUtil.isEmpty(report.getRisks())) {
+                message.append("当前扫描范围未发现高优先级风险。");
+            } else {
+                report.getRisks().stream().limit(8).forEach(risk -> message.append(risk.getLevel())
+                        .append(" / ")
+                        .append(risk.getCategory())
+                        .append(" / ")
+                        .append(risk.getTitle())
+                        .append('\n')
+                        .append("  ")
+                        .append(OpsCenterSupport.blankToDash(risk.getConfigName()))
+                        .append(" / ")
+                        .append(OpsCenterSupport.blankToDash(risk.getRegion()))
+                        .append(": ")
+                        .append(OpsCenterSupport.shorten(risk.getMessage(), 150))
+                        .append('\n'));
+            }
+
+            List<InlineKeyboardRow> rows = new ArrayList<>();
+            rows.add(new InlineKeyboardRow(
+                    KeyboardBuilder.button("刷新风险看板", "ops_risk_summary"),
+                    KeyboardBuilder.button("系统诊断", "ops_diagnostics")
+            ));
+            rows.add(new InlineKeyboardRow(KeyboardBuilder.button("返回运维中心", "ops_center")));
+            rows.add(KeyboardBuilder.buildCancelRow());
+            return buildEditMessage(callbackQuery, OpsCenterSupport.escapeMarkdown(OpsCenterSupport.limitTelegramText(message.toString())), new InlineKeyboardMarkup(rows));
+        } catch (Exception e) {
+            log.error("Telegram OCI risk summary failed", e);
+            return buildEditMessage(callbackQuery, OpsCenterSupport.escapeMarkdown("风险看板读取失败: " + e.getMessage()), OpsCenterHandler.buildOpsKeyboard());
+        }
+    }
+
+    @Override
+    public String getCallbackPattern() {
+        return "ops_risk_summary";
+    }
+}
+
+@Slf4j
+@Component
+class OpsBackupArchiveHandler extends AbstractCallbackHandler {
+
+    @Override
+    public BotApiMethod<? extends Serializable> handle(CallbackQuery callbackQuery, TelegramClient telegramClient) {
+        try {
+            ObjectStorageBackupService backupService = SpringUtil.getBean(ObjectStorageBackupService.class);
+            List<String> backups = backupService.listLocalBackups(8);
+
+            StringBuilder message = new StringBuilder("【备份归档】\n\n");
+            message.append("Web 端已支持本地备份包创建、OCI Object Storage 上传、归档列表刷新和对象删除。\n");
+            message.append("TG 端保留为状态入口，涉及 Bucket 选择和删除等动作建议在 Web 控制台完成。\n\n");
+            message.append("本地备份目录: /app/king-detective/backups\n");
+            if (CollectionUtil.isEmpty(backups)) {
+                message.append("最近本地备份: 暂无\n");
+            } else {
+                message.append("最近本地备份:\n");
+                backups.forEach(item -> message.append("- ").append(item).append('\n'));
+            }
+
+            List<InlineKeyboardRow> rows = new ArrayList<>();
+            rows.add(new InlineKeyboardRow(
+                    KeyboardBuilder.button("备份恢复", "backup_restore"),
+                    KeyboardBuilder.button("系统诊断", "ops_diagnostics")
+            ));
+            rows.add(new InlineKeyboardRow(KeyboardBuilder.button("返回运维中心", "ops_center")));
+            rows.add(KeyboardBuilder.buildCancelRow());
+            return buildEditMessage(callbackQuery, OpsCenterSupport.escapeMarkdown(OpsCenterSupport.limitTelegramText(message.toString())), new InlineKeyboardMarkup(rows));
+        } catch (Exception e) {
+            log.error("Telegram backup archive failed", e);
+            return buildEditMessage(callbackQuery, OpsCenterSupport.escapeMarkdown("备份归档读取失败: " + e.getMessage()), OpsCenterHandler.buildOpsKeyboard());
+        }
+    }
+
+    @Override
+    public String getCallbackPattern() {
+        return "ops_backup_archive";
+    }
+}
+
 @Component
 class OpsQuickActionsHandler extends AbstractCallbackHandler {
 
@@ -553,6 +661,10 @@ class OpsQuickActionsHandler extends AbstractCallbackHandler {
         rows.add(new InlineKeyboardRow(
                 KeyboardBuilder.button("系统诊断", "ops_diagnostics"),
                 KeyboardBuilder.button("错误日志", "ops_error_logs")
+        ));
+        rows.add(new InlineKeyboardRow(
+                KeyboardBuilder.button("风险看板", "ops_risk_summary"),
+                KeyboardBuilder.button("备份归档", "ops_backup_archive")
         ));
         rows.add(new InlineKeyboardRow(
                 KeyboardBuilder.button("版本更新", "ops_version_status"),
