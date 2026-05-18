@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Local/CI release verification helper. It runs only checks available in the current environment.
+
+set -Eeuo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+RUN_FRONTEND="${RUN_FRONTEND:-1}"
+RUN_MAVEN="${RUN_MAVEN:-1}"
+RUN_SHELLCHECK="${RUN_SHELLCHECK:-0}"
+
+log() {
+    printf '%s\n' "$*"
+}
+
+warn() {
+    printf '[WARN] %s\n' "$*"
+}
+
+run() {
+    log ">>> $*"
+    "$@"
+}
+
+cd "$ROOT_DIR"
+
+log "=== Wang-Detective 发布前轻量验证 ==="
+
+if command -v git >/dev/null 2>&1; then
+    run git diff --check
+fi
+
+if command -v bash >/dev/null 2>&1; then
+    for script in scripts/*.sh; do
+        [ -f "$script" ] || continue
+        run bash -n "$script"
+    done
+fi
+
+if [ "$RUN_SHELLCHECK" = "1" ]; then
+    if command -v shellcheck >/dev/null 2>&1; then
+        run shellcheck scripts/*.sh
+    else
+        warn "shellcheck 不可用，已跳过"
+    fi
+fi
+
+if [ "$RUN_FRONTEND" = "1" ]; then
+    if command -v npm >/dev/null 2>&1 && [ -f frontend/package.json ]; then
+        run npm --prefix frontend run build
+    else
+        warn "npm 或 frontend/package.json 不可用，已跳过前端构建"
+    fi
+fi
+
+if [ "$RUN_MAVEN" = "1" ]; then
+    if command -v mvn >/dev/null 2>&1 && [ -f pom.xml ]; then
+        run mvn -DskipTests package
+    else
+        warn "mvn 或 pom.xml 不可用，已跳过 Maven 构建"
+    fi
+fi
+
+log "验证脚本执行完成"

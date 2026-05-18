@@ -17,7 +17,7 @@ services:
       - app-network
 
   king-detective:
-    image: ghcr.io/tony-wang1990/wang-detective:main
+    image: ${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective:main}
     container_name: king-detective
     restart: always
     environment:

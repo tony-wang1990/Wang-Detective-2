@@ -71,7 +71,7 @@ else
 fi
 
 echo "步骤 2: 创建目录..."
-mkdir -p /app/king-detective/data /app/king-detective/keys /app/king-detective/logs /app/king-detective/runtime || { echo "错误: 无法创建目录"; exit 1; }
+mkdir -p /app/king-detective/data /app/king-detective/keys /app/king-detective/logs /app/king-detective/runtime /app/king-detective/scripts || { echo "错误: 无法创建目录"; exit 1; }
 cd /app/king-detective || { echo "错误: 无法进入目录"; exit 1; }
 
 echo "步骤 3: 下载配置文件..."
@@ -85,7 +85,7 @@ else
 fi
 
 # 兼容早期增强版部署文件：刷新旧镜像、旧健康检查、未启用 watcher 或缺少低配 VPS 优化的 compose。
-if grep -q "king-detective-websockify\\|ghcr.io/tony-wang1990/king-detective:main\\|start_period: 45s\\|profiles:.*watcher" docker-compose.yml || ! grep -q "JAVA_TOOL_OPTIONS" docker-compose.yml || ! grep -q "king-detective-watcher" docker-compose.yml; then
+if grep -q "king-detective-websockify\\|ghcr.io/tony-wang1990/king-detective:main\\|start_period: 45s\\|profiles:.*watcher" docker-compose.yml || ! grep -q "JAVA_TOOL_OPTIONS" docker-compose.yml || ! grep -q "king-detective-watcher" docker-compose.yml || ! grep -Fq 'image: ${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective:main}' docker-compose.yml; then
     backup_file="docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)"
     cp docker-compose.yml "$backup_file"
     wget -q -O docker-compose.yml https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/docker-compose.yml || { echo "错误: 刷新 docker-compose.yml 失败"; mv "$backup_file" docker-compose.yml; exit 1; }
@@ -164,6 +164,25 @@ ensure_env "KING_DETECTIVE_GITHUB_REPOSITORY" "tony-wang1990/Wang-Detective"
 ensure_env "KING_DETECTIVE_GITHUB_BRANCH" "main"
 ensure_env "KING_DETECTIVE_IMAGE" "ghcr.io/tony-wang1990/wang-detective:main"
 ensure_env "JAVA_TOOL_OPTIONS" "-Xms96m -Xmx384m -XX:MaxMetaspaceSize=192m -XX:ActiveProcessorCount=1 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Djava.net.preferIPv4Stack=true"
+
+echo "步骤 3.1: 同步运维脚本..."
+SCRIPT_BASE_URL="https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/scripts"
+for script_name in \
+    watcher.sh \
+    server-smoke-test.sh \
+    backup.sh \
+    restore.sh \
+    update.sh \
+    rollback.sh \
+    support-bundle.sh \
+    maintenance.sh \
+    setup-backup-cron.sh \
+    verify-release.sh
+do
+    wget -q -O "scripts/${script_name}" "${SCRIPT_BASE_URL}/${script_name}" || { echo "错误: 下载 scripts/${script_name} 失败"; exit 1; }
+done
+chmod +x scripts/*.sh
+echo "  - 运维脚本已同步"
 
 echo "步骤 4: 拉取最新镜像..."
 compose pull king-detective watcher || { echo "错误: 拉取核心镜像或 watcher 镜像失败"; exit 1; }

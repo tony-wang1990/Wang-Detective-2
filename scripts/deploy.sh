@@ -167,7 +167,7 @@ show_deployment_info() {
     echo "   - 停止服务: docker-compose down"
     echo ""
     echo "📚 更多信息："
-    echo "   - GitHub: https://github.com/tony-wang1990/King-Detective"
+    echo "   - GitHub: https://github.com/tony-wang1990/Wang-Detective"
     echo "   - 文档: 查看 README.md"
     echo ""
 }

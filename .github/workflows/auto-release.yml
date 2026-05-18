@@ -69,11 +69,11 @@ jobs:
             
             #### 方式2：命令行更新
             ```bash
-            bash <(wget -qO- https://raw.githubusercontent.com/tony-wang1990/King-Detective/main/scripts/install.sh)
+            bash <(wget -qO- https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/scripts/install.sh)
             ```
             
             ## 项目地址
-            https://github.com/tony-wang1990/King-Detective
+            https://github.com/tony-wang1990/Wang-Detective
           draft: false
           prerelease: false
         env:

@@ -20,7 +20,7 @@
 - `Dockerfile` 增加健康检查并统一 `KING_DETECTIVE_VERSION`。
 - `scripts/install.sh` 生成 `.env`，不再下载仓库中不存在的数据库文件。
 - `scripts/watcher.sh` 接受任意非空触发内容，修复 DB 路径和 `oci_kv.id` 插入。
-- `update.sh` 同时兼容 `TELEGRAM_BOT_TOKEN` 与旧的 `BOT_TOKEN`。
+- `scripts/update.sh` 提供手动更新入口，兼容新版 `KING_DETECTIVE_IMAGE` 和更新前备份。
 
 ### 数据库
 

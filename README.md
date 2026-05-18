@@ -60,6 +60,7 @@ bash scripts/server-smoke-test.sh
 - 2026-05-18 修复 Web/TGBOT 一键更新链路：安装脚本默认启动 `king-detective-watcher`，后端检测 watcher 心跳，更新失败会给明确提示；同时修复诊断页 Telegram 误报、按钮卡字和登录阶段同步查 GitHub 导致的卡顿。
 - 2026-05-18 继续完成前端交互打磨：资源页真实 OCI 高危操作、任务停止/批量停止和顶部版本更新均改为页面内确认弹窗/状态提示，移除浏览器原生 `prompt/confirm/alert`；TGBOT 启动和诊断新增 `TELEGRAM_CHAT_ID` 环境变量兜底，减少“已配置但误报未配置”的情况。
 - 2026-05-18 新增服务器部署冒烟检查：`scripts/server-smoke-test.sh` 可在 VPS 上检查 Docker/Compose、配置文件、容器健康、watcher 心跳、Web 登录、诊断、版本、配置/任务分页、运维主机、操作审计和前端路由；真实 OCI 改动项整理到验收清单，避免部署后靠截图猜问题。
+- 2026-05-18 补齐服务器运维脚本工具箱：安装脚本会同步 `backup.sh`、`restore.sh`、`update.sh`、`rollback.sh`、`support-bundle.sh`、`maintenance.sh`、`setup-backup-cron.sh` 和 `verify-release.sh`，先把后续规划需要的脚本基础铺完整。
 
 当前仍未完成、后续必须重点推进：
 
@@ -165,10 +166,18 @@ docker logs -f king-detective
 docker compose restart king-detective
 
 # 手动更新
-TELEGRAM_BOT_TOKEN="xxx" ADMIN_USERNAME="admin" ADMIN_PASSWORD="strong_password" bash update.sh
+bash scripts/update.sh
 
 # 部署后冒烟检查
 bash scripts/server-smoke-test.sh
+
+# 统一维护入口
+bash scripts/maintenance.sh menu
+
+# 备份 / 恢复 / 支持包
+bash scripts/backup.sh
+bash scripts/restore.sh /app/king-detective/backups/wang-detective-backup-YYYYmmdd-HHMMSS.tar.gz
+bash scripts/support-bundle.sh
 ```
 
 ## 部署问题处理
@@ -226,6 +235,8 @@ UI 重设计路线和后续拆分见 [docs/UI_REDESIGN_ROADMAP.md](docs/UI_REDES
 代码审计、API 映射和本轮修复记录见 [docs/CODE_AUDIT_REPORT.md](docs/CODE_AUDIT_REPORT.md)。
 
 部署冒烟检查和真实 OCI 操作验收清单见 [docs/DEPLOYMENT_SMOKE_TEST.md](docs/DEPLOYMENT_SMOKE_TEST.md)。
+
+服务器运维脚本工具箱见 [docs/OPERATIONS_SCRIPTS.md](docs/OPERATIONS_SCRIPTS.md)。
 
 ## 2026-05-18 更新链路与 UI 细节修复
 
