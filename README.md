@@ -34,6 +34,15 @@ cd /app/king-detective
 docker compose up -d --force-recreate
 ```
 
+部署后建议立即跑一次服务器冒烟检查，确认容器、登录、健康检查、watcher、关键 API 和前端路由都正常：
+
+```bash
+cd /app/king-detective
+bash scripts/server-smoke-test.sh
+```
+
+完整部署验收流程见 [docs/DEPLOYMENT_SMOKE_TEST.md](docs/DEPLOYMENT_SMOKE_TEST.md)。
+
 ## 当前阶段状态
 
 本阶段已经完成第一轮稳定性修复、部署修复、运维入口一期、主面板新功能入口、UI 重设计第一阶段和发布前代码审计第一轮。当前仓库 `main` 是可继续部署验证的阶段版本，后续开发会继续以 UI 深化、运维审计和 OCI 能力补齐为主线推进。
@@ -50,6 +59,7 @@ docker compose up -d --force-recreate
 - 2026-05-17 完成前端操作审计页原生化：新增 `/dashboard/ops-audit`，接入 `/api/ops/audit/recent`，支持审计摘要、搜索、状态筛选、条数切换和详情查看。
 - 2026-05-18 修复 Web/TGBOT 一键更新链路：安装脚本默认启动 `king-detective-watcher`，后端检测 watcher 心跳，更新失败会给明确提示；同时修复诊断页 Telegram 误报、按钮卡字和登录阶段同步查 GitHub 导致的卡顿。
 - 2026-05-18 继续完成前端交互打磨：资源页真实 OCI 高危操作、任务停止/批量停止和顶部版本更新均改为页面内确认弹窗/状态提示，移除浏览器原生 `prompt/confirm/alert`；TGBOT 启动和诊断新增 `TELEGRAM_CHAT_ID` 环境变量兜底，减少“已配置但误报未配置”的情况。
+- 2026-05-18 新增服务器部署冒烟检查：`scripts/server-smoke-test.sh` 可在 VPS 上检查 Docker/Compose、配置文件、容器健康、watcher 心跳、Web 登录、诊断、版本、配置/任务分页、运维主机、操作审计和前端路由；真实 OCI 改动项整理到验收清单，避免部署后靠截图猜问题。
 
 当前仍未完成、后续必须重点推进：
 
@@ -156,6 +166,9 @@ docker compose restart king-detective
 
 # 手动更新
 TELEGRAM_BOT_TOKEN="xxx" ADMIN_USERNAME="admin" ADMIN_PASSWORD="strong_password" bash update.sh
+
+# 部署后冒烟检查
+bash scripts/server-smoke-test.sh
 ```
 
 ## 部署问题处理
@@ -211,6 +224,8 @@ mvn package
 UI 重设计路线和后续拆分见 [docs/UI_REDESIGN_ROADMAP.md](docs/UI_REDESIGN_ROADMAP.md)。
 
 代码审计、API 映射和本轮修复记录见 [docs/CODE_AUDIT_REPORT.md](docs/CODE_AUDIT_REPORT.md)。
+
+部署冒烟检查和真实 OCI 操作验收清单见 [docs/DEPLOYMENT_SMOKE_TEST.md](docs/DEPLOYMENT_SMOKE_TEST.md)。
 
 ## 2026-05-18 更新链路与 UI 细节修复
 
