@@ -19,6 +19,7 @@ ops:
 telegram:
   bot:
     token: ${TELEGRAM_BOT_TOKEN:${BOT_TOKEN:}}
+    chat-id: ${TELEGRAM_BOT_CHAT_ID:${TELEGRAM_CHAT_ID:${TG_CHAT_ID:}}}
     username: ${TELEGRAM_BOT_USERNAME:king_detective_bot}
 # --------------------------------------- 用户自定义修改项 ------------------------------------
 

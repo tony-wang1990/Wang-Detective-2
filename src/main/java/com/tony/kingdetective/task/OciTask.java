@@ -87,6 +87,10 @@ public class OciTask implements ApplicationRunner {
     private String account;
     @Value("${web.password}")
     private String password;
+    @Value("${telegram.bot.token:${TELEGRAM_BOT_TOKEN:${BOT_TOKEN:}}}")
+    private String telegramBotToken;
+    @Value("${telegram.bot.chat-id:${TELEGRAM_BOT_CHAT_ID:${TELEGRAM_CHAT_ID:${TG_CHAT_ID:}}}}")
+    private String telegramChatId;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -108,21 +112,41 @@ public class OciTask implements ApplicationRunner {
         virtualExecutor.execute(() -> {
             OciKv tgToken = kvService.getOne(new LambdaQueryWrapper<OciKv>().eq(OciKv::getCode, SysCfgEnum.SYS_TG_BOT_TOKEN.getCode()));
             OciKv tgChatId = kvService.getOne(new LambdaQueryWrapper<OciKv>().eq(OciKv::getCode, SysCfgEnum.SYS_TG_CHAT_ID.getCode()));
-            if (null == tgToken || null == tgChatId) {
-                log.warn("TG Bot token or chat ID not configured, skipping TG Bot startup");
+            String token = firstNonBlank(kvValue(tgToken), telegramBotToken);
+            String chatId = firstNonBlank(kvValue(tgChatId), telegramChatId);
+            if (StrUtil.isBlank(token) && StrUtil.isBlank(chatId)) {
+                log.info("TG Bot token and chat ID are not configured, skipping TG Bot startup");
                 return;
             }
-            if (StrUtil.isNotBlank(tgToken.getValue()) && StrUtil.isNotBlank(tgChatId.getValue())) {
+            if (StrUtil.isBlank(token) || StrUtil.isBlank(chatId)) {
+                log.warn("TG Bot config is incomplete, tokenConfigured={}, chatIdConfigured={}",
+                        StrUtil.isNotBlank(token), StrUtil.isNotBlank(chatId));
+                return;
+            }
+            if (StrUtil.isNotBlank(token) && StrUtil.isNotBlank(chatId)) {
                 botsApplication = new TelegramBotsLongPollingApplication();
                 try {
-                    botsApplication.registerBot(tgToken.getValue(), new TgBot(tgToken.getValue(), tgChatId.getValue()));
-                    log.info("TG Bot successfully started with chatId: {}", tgChatId.getValue());
+                    botsApplication.registerBot(token, new TgBot(token, chatId));
+                    log.info("TG Bot successfully started with chatId: {}", chatId);
                 } catch (Exception e) {
                     log.error("Failed to start TG Bot", e);
                 }
                 // Virtual thread continues to run, no need for join()
             }
         });
+    }
+
+    private String kvValue(OciKv kv) {
+        return kv == null ? null : kv.getValue();
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StrUtil.isNotBlank(value)) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 
     private void cleanLogTask() {

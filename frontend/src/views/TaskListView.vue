@@ -19,7 +19,16 @@ type Row = {
   [key: string]: unknown;
 };
 
+type ConfirmDialog = {
+  title: string;
+  description: string;
+  target?: string;
+  ids: string[];
+  actionLabel: string;
+};
+
 const loading = ref(false);
+const stopping = ref(false);
 const keyword = ref('');
 const architecture = ref('');
 const rows = ref<Row[]>([]);
@@ -30,6 +39,7 @@ const currentPage = ref(1);
 const pageSize = ref(10);
 const selectedIds = ref<string[]>([]);
 const selectedDetail = ref<Row | null>(null);
+const confirmDialog = ref<ConfirmDialog | null>(null);
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)));
 const selectedCount = computed(() => selectedIds.value.length);
@@ -115,28 +125,47 @@ async function load() {
 
 async function stopTask(row: Row) {
   const id = rowId(row);
-  if (!id || !window.confirm(`确定停止 ${taskName(row)} 的开机任务吗？`)) return;
+  if (!id) return;
+  confirmDialog.value = {
+    title: '停止开机任务',
+    description: '停止后该配置的抢机任务会被取消，正在执行中的任务可能需要等待后端完成当前轮询。',
+    target: taskName(row),
+    ids: [id],
+    actionLabel: '确认停止'
+  };
+}
+
+async function submitStopDialog() {
+  const current = confirmDialog.value;
+  if (!current || current.ids.length === 0) return;
+  stopping.value = true;
   try {
-    await apiPost('/oci/stopCreateBatch', { idList: [id] });
-    notice.value = '停止任务已提交';
-    selectedIds.value = selectedIds.value.filter((item) => item !== id);
+    await apiPost('/oci/stopCreateBatch', { idList: current.ids });
+    notice.value = current.ids.length > 1 ? '批量停止任务已提交' : '停止任务已提交';
+    selectedIds.value = selectedIds.value.filter((item) => !current.ids.includes(item));
+    confirmDialog.value = null;
     await load();
   } catch (err) {
     error.value = err instanceof Error ? err.message : '停止任务失败';
+  } finally {
+    stopping.value = false;
   }
 }
 
 async function stopSelected() {
   if (!selectedIds.value.length) return;
-  if (!window.confirm(`确定停止选中的 ${selectedIds.value.length} 个开机任务吗？`)) return;
-  try {
-    await apiPost('/oci/stopCreateBatch', { idList: selectedIds.value });
-    notice.value = '批量停止任务已提交';
-    selectedIds.value = [];
-    await load();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '批量停止任务失败';
-  }
+  confirmDialog.value = {
+    title: '批量停止开机任务',
+    description: '将停止当前选中的开机任务，请确认这些任务不再需要继续抢机。',
+    target: `${selectedIds.value.length} 个任务`,
+    ids: [...selectedIds.value],
+    actionLabel: '批量停止'
+  };
+}
+
+function closeConfirmDialog() {
+  if (stopping.value) return;
+  confirmDialog.value = null;
 }
 
 function previousPage() {
@@ -256,6 +285,29 @@ onMounted(load);
         <button type="button" @click="selectedDetail = null">关闭</button>
       </header>
       <pre class="wd-terminal small">{{ JSON.stringify(selectedDetail, null, 2) }}</pre>
+    </div>
+
+    <div v-if="confirmDialog" class="wd-dialog-backdrop" @click.self="closeConfirmDialog">
+      <form class="wd-dialog danger" @submit.prevent="submitStopDialog">
+        <header>
+          <div>
+            <span>任务操作确认</span>
+            <h3>{{ confirmDialog.title }}</h3>
+          </div>
+          <button type="button" class="ghost" @click="closeConfirmDialog">关闭</button>
+        </header>
+        <p>{{ confirmDialog.description }}</p>
+        <div v-if="confirmDialog.target" class="wd-dialog-target">
+          <span>目标</span>
+          <strong>{{ confirmDialog.target }}</strong>
+        </div>
+        <footer>
+          <button type="button" class="ghost" @click="closeConfirmDialog">取消</button>
+          <button type="submit" class="danger" :disabled="stopping">
+            {{ stopping ? '提交中...' : confirmDialog.actionLabel }}
+          </button>
+        </footer>
+      </form>
     </div>
   </section>
 </template>

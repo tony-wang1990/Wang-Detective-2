@@ -113,11 +113,15 @@ if [ ! -f ".env" ]; then
     ADMIN_PASSWORD="${ADMIN_PASSWORD:-${WEB_PASSWORD:-admin123456}}"
     OPS_SSH_SECRET_KEY="${OPS_SSH_SECRET_KEY:-$ADMIN_PASSWORD}"
     TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-${BOT_TOKEN:-}}"
+    TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-${TG_CHAT_ID:-}}"
+    TELEGRAM_BOT_CHAT_ID="${TELEGRAM_BOT_CHAT_ID:-$TELEGRAM_CHAT_ID}"
     cat > .env <<EOF
 ADMIN_USERNAME=${ADMIN_USERNAME}
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
 OPS_SSH_SECRET_KEY=${OPS_SSH_SECRET_KEY}
 TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+TELEGRAM_BOT_CHAT_ID=${TELEGRAM_BOT_CHAT_ID}
 TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-king_detective_bot}
 OPENAI_API_KEY=${OPENAI_API_KEY:-}
 OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.siliconflow.cn}
@@ -148,7 +152,12 @@ ensure_env() {
 
 current_admin_password="$(grep -E '^ADMIN_PASSWORD=' .env | tail -n1 | cut -d= -f2-)"
 current_admin_password="${current_admin_password:-admin123456}"
+current_tg_chat_id="$(grep -E '^TELEGRAM_BOT_CHAT_ID=' .env | tail -n1 | cut -d= -f2-)"
+current_tg_chat_id="${current_tg_chat_id:-$(grep -E '^TELEGRAM_CHAT_ID=' .env | tail -n1 | cut -d= -f2-)}"
+current_tg_chat_id="${current_tg_chat_id:-$(grep -E '^TG_CHAT_ID=' .env | tail -n1 | cut -d= -f2-)}"
 ensure_env "OPS_SSH_SECRET_KEY" "$current_admin_password"
+ensure_env "TELEGRAM_CHAT_ID" "$current_tg_chat_id"
+ensure_env "TELEGRAM_BOT_CHAT_ID" "$current_tg_chat_id"
 ensure_env "SERVER_ADDRESS" "0.0.0.0"
 ensure_env "SERVER_PORT" "9527"
 ensure_env "KING_DETECTIVE_GITHUB_REPOSITORY" "tony-wang1990/Wang-Detective"

@@ -1769,6 +1769,176 @@ html.dark .wd-leaflet-map .leaflet-tile {
   font-weight: 800;
 }
 
+.wd-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, .52);
+  backdrop-filter: blur(10px);
+}
+
+.wd-dialog {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  background: var(--wd-surface);
+  color: var(--wd-text);
+  box-shadow: 0 30px 90px rgba(15, 23, 42, .28);
+}
+
+.wd-dialog.danger {
+  border-color: color-mix(in srgb, var(--wd-danger) 42%, var(--wd-line));
+}
+
+.wd-dialog header,
+.wd-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wd-dialog header span,
+.wd-dialog-target span {
+  color: var(--wd-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wd-dialog h3 {
+  margin: 3px 0 0;
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.wd-dialog p {
+  margin: 0;
+  color: var(--wd-muted);
+  line-height: 1.7;
+}
+
+.wd-dialog-target {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  background: var(--wd-surface-2);
+}
+
+.wd-dialog-target strong {
+  word-break: break-all;
+}
+
+.wd-dialog-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.wd-dialog-fields label {
+  display: grid;
+  gap: 7px;
+  color: var(--wd-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.wd-dialog-fields label.checkbox {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.wd-dialog-fields label.checkbox small {
+  grid-column: 1 / -1;
+}
+
+.wd-dialog-fields input:not([type='checkbox']),
+.wd-dialog-fields textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  background: var(--wd-surface-2);
+  color: var(--wd-text);
+  outline: 0;
+}
+
+.wd-dialog-fields input:not([type='checkbox']):focus,
+.wd-dialog-fields textarea:focus {
+  border-color: var(--wd-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wd-accent) 18%, transparent);
+}
+
+.wd-dialog-fields textarea {
+  min-height: 96px;
+  padding-block: 10px;
+  resize: vertical;
+}
+
+.wd-dialog-fields small {
+  color: var(--wd-muted);
+  font-weight: 700;
+}
+
+.wd-dialog header button,
+.wd-dialog footer button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  padding: 0 14px;
+  background: var(--wd-surface-2);
+  color: var(--wd-text);
+  font-weight: 900;
+}
+
+.wd-dialog footer button[type='submit'] {
+  border-color: var(--wd-accent);
+  background: var(--wd-accent);
+  color: #fff;
+}
+
+.wd-dialog footer button.danger {
+  border-color: var(--wd-danger);
+  background: var(--wd-danger);
+  color: #fff;
+}
+
+.wd-toast {
+  position: fixed;
+  right: 22px;
+  top: 78px;
+  z-index: 90;
+  max-width: min(420px, calc(100vw - 44px));
+  padding: 12px 14px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  background: var(--wd-surface);
+  color: var(--wd-text);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, .18);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.wd-toast.success {
+  border-color: color-mix(in srgb, var(--wd-accent-2) 45%, var(--wd-line));
+}
+
+.wd-toast.error {
+  border-color: color-mix(in srgb, var(--wd-danger) 45%, var(--wd-line));
+  color: var(--wd-danger);
+}
+
 @media (max-width: 1100px) {
   .wd-shell,
   .wd-shell.is-sidebar-collapsed,

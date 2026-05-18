@@ -88,6 +88,31 @@ type InstanceCfg = {
   shape?: string;
 };
 
+type DialogValue = string | number | boolean;
+
+type DialogField = {
+  key: string;
+  label: string;
+  value: DialogValue;
+  type?: 'text' | 'number' | 'password' | 'textarea' | 'checkbox';
+  placeholder?: string;
+  help?: string;
+  min?: number;
+};
+
+type ActionDialog = {
+  title: string;
+  description: string;
+  target?: string;
+  actionLabel: string;
+  busyKey: string;
+  danger?: boolean;
+  refreshDetail?: boolean;
+  fields: DialogField[];
+  onConfirm: (values: Record<string, DialogValue>) => Promise<void>;
+  afterSuccess?: () => void;
+};
+
 const loading = ref(false);
 const keyword = ref('');
 const rows = ref<Row[]>([]);
@@ -106,6 +131,7 @@ const actionBusy = ref('');
 const showAddForm = ref(false);
 const showCreateForm = ref(false);
 const keyFile = ref<File | null>(null);
+const actionDialog = ref<ActionDialog | null>(null);
 
 const addForm = reactive({
   username: '',
@@ -209,10 +235,70 @@ async function runAction(label: string, key: string, fn: () => Promise<void>, re
       await loadDetails(true);
     }
     await load();
+    return true;
   } catch (err) {
     error.value = err instanceof Error ? err.message : `${label} 失败`;
+    return false;
   } finally {
     actionBusy.value = '';
+  }
+}
+
+function openActionDialog(dialog: ActionDialog) {
+  error.value = '';
+  actionDialog.value = dialog;
+}
+
+function closeActionDialog() {
+  if (actionBusy.value) return;
+  actionDialog.value = null;
+}
+
+function dialogString(values: Record<string, DialogValue>, key: string) {
+  return String(values[key] ?? '').trim();
+}
+
+function dialogNumber(values: Record<string, DialogValue>, key: string, fallback = 0) {
+  const value = Number(values[key]);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function dialogBoolean(values: Record<string, DialogValue>, key: string) {
+  return values[key] === true;
+}
+
+function dialogFieldText(field: DialogField) {
+  return String(field.value ?? '');
+}
+
+function updateDialogField(field: DialogField, event: Event) {
+  const target = event.target as HTMLInputElement | HTMLTextAreaElement | null;
+  if (!target) return;
+  field.value = target.value;
+}
+
+function updateDialogCheckbox(field: DialogField, event: Event) {
+  const target = event.target as HTMLInputElement | null;
+  if (!target) return;
+  field.value = target.checked;
+}
+
+async function submitActionDialog() {
+  const current = actionDialog.value;
+  if (!current) return;
+  const values = current.fields.reduce<Record<string, DialogValue>>((acc, field) => {
+    acc[field.key] = field.value;
+    return acc;
+  }, {});
+  const success = await runAction(
+    current.actionLabel,
+    current.busyKey,
+    () => current.onConfirm(values),
+    current.refreshDetail ?? true
+  );
+  if (success) {
+    actionDialog.value = null;
+    current.afterSuccess?.();
   }
 }
 
@@ -295,36 +381,74 @@ async function addConfig() {
 async function renameConfig(row: Row) {
   const id = rowId(row);
   if (!id) return;
-  const nextName = window.prompt('请输入新的配置名称', displayName(row));
-  if (!nextName || nextName === displayName(row)) return;
-  await runAction('修改配置名称', actionKey('rename-cfg', id), async () => {
-    await apiPost('/oci/updateCfgName', { cfgId: id, updateCfgName: nextName });
-  }, false);
+  openActionDialog({
+    title: '修改配置名称',
+    description: '只修改本地显示名称，不会改动 OCI 侧资源。',
+    target: displayName(row),
+    actionLabel: '修改配置名称',
+    busyKey: actionKey('rename-cfg', id),
+    refreshDetail: false,
+    fields: [{ key: 'name', label: '新配置名称', value: displayName(row), placeholder: '例如 oracle-seoul-a1' }],
+    onConfirm: async (values) => {
+      const nextName = dialogString(values, 'name');
+      if (!nextName) throw new Error('请填写新的配置名称');
+      await apiPost('/oci/updateCfgName', { cfgId: id, updateCfgName: nextName });
+    }
+  });
 }
 
 async function deleteSelected() {
   if (!selectedIds.value.length) return;
-  if (!window.confirm(`确认删除 ${selectedIds.value.length} 个配置？此操作会删除配置和密钥数据。`)) return;
-  await runAction('删除配置', 'delete-selected', async () => {
-    await apiPost('/oci/removeCfg', { idList: selectedIds.value });
-    selectedIds.value = [];
-  }, false);
+  const idList = [...selectedIds.value];
+  openActionDialog({
+    title: '删除配置',
+    description: '此操作会删除配置记录和对应密钥数据，请确认这些配置已经不再使用。',
+    target: `${idList.length} 个配置`,
+    actionLabel: '删除配置',
+    busyKey: 'delete-selected',
+    danger: true,
+    refreshDetail: false,
+    fields: [],
+    onConfirm: async () => {
+      await apiPost('/oci/removeCfg', { idList });
+      selectedIds.value = [];
+    }
+  });
 }
 
 async function stopCreate(row: Row) {
   const id = rowId(row);
-  if (!id || !window.confirm(`确认停止 ${displayName(row)} 的开机任务？`)) return;
-  await runAction('停止开机任务', actionKey('stop-create', id), async () => {
-    await apiPost('/oci/stopCreate', { userId: id });
-  }, false);
+  if (!id) return;
+  openActionDialog({
+    title: '停止开机任务',
+    description: '会停止当前配置正在执行的抢机/开机任务，不会删除已经创建成功的实例。',
+    target: displayName(row),
+    actionLabel: '停止开机任务',
+    busyKey: actionKey('stop-create', id),
+    refreshDetail: false,
+    fields: [],
+    onConfirm: async () => {
+      await apiPost('/oci/stopCreate', { userId: id });
+    }
+  });
 }
 
 async function releaseSecurityRule(row: Row) {
   const id = rowId(row);
-  if (!id || !window.confirm(`确认放行 ${displayName(row)} 的安全列表？这会修改 OCI 安全规则。`)) return;
-  await runAction('安全列表放行', actionKey('release-rule', id), async () => {
-    await apiPost('/oci/releaseSecurityRule', { ociCfgId: id });
-  }, false);
+  if (!id) return;
+  openActionDialog({
+    title: '安全列表放行',
+    description: '会调用 OCI 接口修改安全列表规则，用于放行实例访问。请确认当前租户允许此类变更。',
+    target: displayName(row),
+    actionLabel: '安全列表放行',
+    busyKey: actionKey('release-rule', id),
+    danger: true,
+    refreshDetail: false,
+    fields: [],
+    onConfirm: async () => {
+      await apiPost('/oci/releaseSecurityRule', { ociCfgId: id });
+    }
+  });
 }
 
 async function loadDetails(force: boolean) {
@@ -381,18 +505,36 @@ async function createForSelected() {
 async function updateInstanceState(instance: InstanceInfo, action: 'START' | 'STOP' | 'RESET') {
   const id = instanceId(instance);
   const label = action === 'START' ? '启动实例' : action === 'STOP' ? '停止实例' : '重启实例';
-  if (!id || !window.confirm(`确认${label}：${instanceLabel(instance)}？`)) return;
-  await runAction(label, actionKey(action, id), async () => {
-    await apiPost('/oci/updateInstanceState', { ociCfgId: selectedCfgId.value, instanceId: id, action });
+  if (!id) return;
+  openActionDialog({
+    title: label,
+    description: '会调用 OCI Compute 实例状态接口，请确认目标实例无正在执行的其他变更。',
+    target: instanceLabel(instance),
+    actionLabel: label,
+    busyKey: actionKey(action, id),
+    danger: action !== 'START',
+    fields: [],
+    onConfirm: async () => {
+      await apiPost('/oci/updateInstanceState', { ociCfgId: selectedCfgId.value, instanceId: id, action });
+    }
   });
 }
 
 async function renameInstance(instance: InstanceInfo) {
   const id = instanceId(instance);
-  const nextName = window.prompt('请输入新的实例名称', instanceLabel(instance));
-  if (!id || !nextName || nextName === instanceLabel(instance)) return;
-  await runAction('修改实例名称', actionKey('rename-instance', id), async () => {
-    await apiPost('/oci/updateInstanceName', { ociCfgId: selectedCfgId.value, instanceId: id, name: nextName });
+  if (!id) return;
+  openActionDialog({
+    title: '修改实例名称',
+    description: '会修改 OCI 实例 Display Name，便于后续识别实例。',
+    target: instanceLabel(instance),
+    actionLabel: '修改实例名称',
+    busyKey: actionKey('rename-instance', id),
+    fields: [{ key: 'name', label: '新实例名称', value: instanceLabel(instance), placeholder: '例如 seoul-a1-main' }],
+    onConfirm: async (values) => {
+      const name = dialogString(values, 'name');
+      if (!name) throw new Error('请填写新的实例名称');
+      await apiPost('/oci/updateInstanceName', { ociCfgId: selectedCfgId.value, instanceId: id, name });
+    }
   });
 }
 
@@ -403,34 +545,62 @@ async function changeIp(instance: InstanceInfo) {
     error.value = '此实例未返回可用 VNIC，无法换 IP';
     return;
   }
-  const cidr = window.prompt('请输入允许临时 SSH 的 CIDR', '0.0.0.0/0');
-  if (!cidr) return;
-  await runAction('提交换 IP 任务', actionKey('change-ip', id), async () => {
-    await apiPost('/oci/changeIp', {
-      ociCfgId: selectedCfgId.value,
-      instanceId: id,
-      vnicId,
-      cidrList: cidr.split(',').map((item) => item.trim()).filter(Boolean),
-      changeCfDns: false,
-      enableProxy: false,
-      ttl: 60
-    });
+  openActionDialog({
+    title: '提交换 IP 任务',
+    description: '会为实例重新分配公网 IP。CIDR 可填写多个，用英文逗号分隔。',
+    target: instanceLabel(instance),
+    actionLabel: '提交换 IP 任务',
+    busyKey: actionKey('change-ip', id),
+    danger: true,
+    fields: [
+      { key: 'cidr', label: '允许临时 SSH 的 CIDR', value: '0.0.0.0/0', placeholder: '0.0.0.0/0,1.2.3.4/32' },
+      { key: 'ttl', label: 'Cloudflare TTL', value: 60, type: 'number', min: 1, help: '未启用 DNS 同步时仅作为预留参数。' }
+    ],
+    onConfirm: async (values) => {
+      const cidr = dialogString(values, 'cidr');
+      if (!cidr) throw new Error('请填写 CIDR');
+      await apiPost('/oci/changeIp', {
+        ociCfgId: selectedCfgId.value,
+        instanceId: id,
+        vnicId,
+        cidrList: cidr.split(',').map((item) => item.trim()).filter(Boolean),
+        changeCfDns: false,
+        enableProxy: false,
+        ttl: dialogNumber(values, 'ttl', 60)
+      });
+    }
   });
 }
 
 async function stopChangeIp(instance: InstanceInfo) {
   const id = instanceId(instance);
-  if (!id || !window.confirm(`确认停止 ${instanceLabel(instance)} 的换 IP 任务？`)) return;
-  await runAction('停止换 IP 任务', actionKey('stop-change-ip', id), async () => {
-    await apiPost('/oci/stopChangeIp', { instanceId: id });
+  if (!id) return;
+  openActionDialog({
+    title: '停止换 IP 任务',
+    description: '会停止此实例后台持续换 IP 任务。',
+    target: instanceLabel(instance),
+    actionLabel: '停止换 IP 任务',
+    busyKey: actionKey('stop-change-ip', id),
+    fields: [],
+    onConfirm: async () => {
+      await apiPost('/oci/stopChangeIp', { instanceId: id });
+    }
   });
 }
 
 async function createIpv6(instance: InstanceInfo) {
   const id = instanceId(instance);
-  if (!id || !window.confirm(`确认给 ${instanceLabel(instance)} 创建 IPv6？`)) return;
-  await runAction('创建 IPv6', actionKey('ipv6', id), async () => {
-    await apiPost('/oci/createIpv6', { ociCfgId: selectedCfgId.value, instanceId: id });
+  if (!id) return;
+  openActionDialog({
+    title: '创建 IPv6',
+    description: '会调用 OCI 网络接口为实例创建 IPv6，请确认当前子网支持 IPv6。',
+    target: instanceLabel(instance),
+    actionLabel: '创建 IPv6',
+    busyKey: actionKey('ipv6', id),
+    fields: [],
+    onConfirm: async () => {
+      await apiPost('/oci/createIpv6', { ociCfgId: selectedCfgId.value, instanceId: id });
+    }
   });
 }
 
@@ -445,34 +615,69 @@ async function startVnc(instance: InstanceInfo) {
 
 async function autoRescue(instance: InstanceInfo) {
   const id = instanceId(instance);
-  const name = window.prompt('请输入救援实例名称', `${instanceLabel(instance)}-rescue`);
-  if (!id || !name) return;
-  const keepBackupVolume = window.confirm('是否保留备份卷？选择确认保留，选择取消自动清理。');
-  await runAction('自动救援', actionKey('rescue', id), async () => {
-    await apiPost('/oci/autoRescue', { ociCfgId: selectedCfgId.value, instanceId: id, name, keepBackupVolume });
+  if (!id) return;
+  openActionDialog({
+    title: '自动救援',
+    description: '会创建救援流程相关资源。建议先确认原实例数据已经备份。',
+    target: instanceLabel(instance),
+    actionLabel: '自动救援',
+    busyKey: actionKey('rescue', id),
+    danger: true,
+    fields: [
+      { key: 'name', label: '救援实例名称', value: `${instanceLabel(instance)}-rescue` },
+      { key: 'keepBackupVolume', label: '保留备份卷', value: true, type: 'checkbox', help: '关闭后流程结束会尝试自动清理备份卷。' }
+    ],
+    onConfirm: async (values) => {
+      const name = dialogString(values, 'name');
+      if (!name) throw new Error('请填写救援实例名称');
+      await apiPost('/oci/autoRescue', {
+        ociCfgId: selectedCfgId.value,
+        instanceId: id,
+        name,
+        keepBackupVolume: dialogBoolean(values, 'keepBackupVolume')
+      });
+    }
   });
 }
 
 async function enable500M(instance: InstanceInfo) {
   const id = instanceId(instance);
-  const sshPort = Number(window.prompt('请输入实例 SSH 端口', '22') || 22);
-  if (!id || Number.isNaN(sshPort)) return;
-  await runAction('开启 500M', actionKey('500m-on', id), async () => {
-    await apiPost('/oci/oneClick500M', { ociCfgId: selectedCfgId.value, instanceId: id, sshPort });
-  }, true);
+  if (!id) return;
+  openActionDialog({
+    title: '开启 500M',
+    description: '会创建/调整负载均衡相关资源以实现 500M 入口能力。',
+    target: instanceLabel(instance),
+    actionLabel: '开启 500M',
+    busyKey: actionKey('500m-on', id),
+    fields: [{ key: 'sshPort', label: '实例 SSH 端口', value: 22, type: 'number', min: 1 }],
+    onConfirm: async (values) => {
+      const sshPort = dialogNumber(values, 'sshPort', 22);
+      if (!sshPort) throw new Error('请填写有效 SSH 端口');
+      await apiPost('/oci/oneClick500M', { ociCfgId: selectedCfgId.value, instanceId: id, sshPort });
+    }
+  });
 }
 
 async function close500M(instance: InstanceInfo) {
   const id = instanceId(instance);
   if (!id) return;
-  const retain = window.confirm('关闭 500M 后是否保留负载均衡器和 NAT 网关？');
-  await runAction('关闭 500M', actionKey('500m-off', id), async () => {
-    await apiPost('/oci/oneClickClose500M', {
-      ociCfgId: selectedCfgId.value,
-      instanceId: id,
-      retainBl: retain,
-      retainNatGw: retain
-    });
+  openActionDialog({
+    title: '关闭 500M',
+    description: '会关闭 500M 相关链路。可选择是否保留负载均衡器和 NAT 网关，方便后续快速恢复。',
+    target: instanceLabel(instance),
+    actionLabel: '关闭 500M',
+    busyKey: actionKey('500m-off', id),
+    danger: true,
+    fields: [{ key: 'retain', label: '保留负载均衡器和 NAT 网关', value: true, type: 'checkbox' }],
+    onConfirm: async (values) => {
+      const retain = dialogBoolean(values, 'retain');
+      await apiPost('/oci/oneClickClose500M', {
+        ociCfgId: selectedCfgId.value,
+        instanceId: id,
+        retainBl: retain,
+        retainNatGw: retain
+      });
+    }
   });
 }
 
@@ -488,56 +693,110 @@ async function getInstanceCfg(instance: InstanceInfo) {
 async function updateInstanceCfg(instance: InstanceInfo) {
   const id = instanceId(instance);
   const current = selectedInstanceCfg.value;
-  const ocpus = window.prompt('请输入 OCPU 数量', current?.ocpus || instance.ocpus || '1');
-  if (!id || !ocpus) return;
-  const memory = window.prompt('请输入内存 GB', current?.memory || instance.memory || '6');
-  if (!memory) return;
-  await runAction('调整 CPU/内存', actionKey('resize-cfg', id), async () => {
-    await apiPost('/oci/updateInstanceCfg', { ociCfgId: selectedCfgId.value, instanceId: id, ocpus, memory });
+  if (!id) return;
+  openActionDialog({
+    title: '调整 CPU/内存',
+    description: '会调用 OCI 实例配置变更接口。部分规格要求实例停止后才能调整。',
+    target: instanceLabel(instance),
+    actionLabel: '调整 CPU/内存',
+    busyKey: actionKey('resize-cfg', id),
+    fields: [
+      { key: 'ocpus', label: 'OCPU 数量', value: current?.ocpus || instance.ocpus || '1' },
+      { key: 'memory', label: '内存 GB', value: current?.memory || instance.memory || '6' }
+    ],
+    onConfirm: async (values) => {
+      const ocpus = dialogString(values, 'ocpus');
+      const memory = dialogString(values, 'memory');
+      if (!ocpus || !memory) throw new Error('请填写 OCPU 和内存');
+      await apiPost('/oci/updateInstanceCfg', { ociCfgId: selectedCfgId.value, instanceId: id, ocpus, memory });
+    }
   });
 }
 
 async function updateShape(instance: InstanceInfo) {
   const id = instanceId(instance);
-  const shape = window.prompt('请输入 Shape', selectedInstanceCfg.value?.shape || instance.shape || 'VM.Standard.A1.Flex');
-  if (!id || !shape) return;
-  await runAction('修改 Shape', actionKey('shape', id), async () => {
-    await apiPost('/oci/updateInstanceShape', { ociCfgId: selectedCfgId.value, instanceId: id, shape });
+  if (!id) return;
+  openActionDialog({
+    title: '修改 Shape',
+    description: '会调用 OCI Shape 变更接口。请确认目标 Shape 在当前区域/可用域有配额。',
+    target: instanceLabel(instance),
+    actionLabel: '修改 Shape',
+    busyKey: actionKey('shape', id),
+    fields: [{ key: 'shape', label: 'Shape', value: selectedInstanceCfg.value?.shape || instance.shape || 'VM.Standard.A1.Flex' }],
+    onConfirm: async (values) => {
+      const shape = dialogString(values, 'shape');
+      if (!shape) throw new Error('请填写 Shape');
+      await apiPost('/oci/updateInstanceShape', { ociCfgId: selectedCfgId.value, instanceId: id, shape });
+    }
   });
 }
 
 async function updateBootVolume(instance: InstanceInfo) {
   const id = instanceId(instance);
-  const size = window.prompt('请输入引导卷大小 GB', selectedInstanceCfg.value?.bootVolumeSize || instance.bootVolumeSize || '50');
-  if (!id || !size) return;
-  const vpu = window.prompt('请输入引导卷 VPU', selectedInstanceCfg.value?.bootVolumeVpu || '10');
-  if (!vpu) return;
-  await runAction('调整引导卷', actionKey('boot-volume', id), async () => {
-    await apiPost('/oci/updateBootVolumeCfg', {
-      ociCfgId: selectedCfgId.value,
-      instanceId: id,
-      bootVolumeSize: size,
-      bootVolumeVpu: vpu
-    });
+  if (!id) return;
+  openActionDialog({
+    title: '调整引导卷',
+    description: '会修改引导卷大小和 VPU。引导卷通常只支持扩容，请谨慎填写。',
+    target: instanceLabel(instance),
+    actionLabel: '调整引导卷',
+    busyKey: actionKey('boot-volume', id),
+    fields: [
+      { key: 'bootVolumeSize', label: '引导卷大小 GB', value: selectedInstanceCfg.value?.bootVolumeSize || instance.bootVolumeSize || '50' },
+      { key: 'bootVolumeVpu', label: '引导卷 VPU', value: selectedInstanceCfg.value?.bootVolumeVpu || '10' }
+    ],
+    onConfirm: async (values) => {
+      const bootVolumeSize = dialogString(values, 'bootVolumeSize');
+      const bootVolumeVpu = dialogString(values, 'bootVolumeVpu');
+      if (!bootVolumeSize || !bootVolumeVpu) throw new Error('请填写引导卷大小和 VPU');
+      await apiPost('/oci/updateBootVolumeCfg', {
+        ociCfgId: selectedCfgId.value,
+        instanceId: id,
+        bootVolumeSize,
+        bootVolumeVpu
+      });
+    }
   });
 }
 
 async function terminateInstance(instance: InstanceInfo) {
   const id = instanceId(instance);
-  if (!id || !window.confirm(`将向 ${instanceLabel(instance)} 发送终止验证码，继续吗？`)) return;
-  await runAction('发送终止验证码', actionKey('captcha', id), async () => {
-    await apiPost('/oci/sendCaptcha', { ociCfgId: selectedCfgId.value, instanceId: id });
-  }, false);
-  const captcha = window.prompt('验证码已发送到通知渠道，请输入验证码继续终止实例');
-  if (!captcha) return;
-  const preserveBootVolume = window.confirm('是否保留引导卷？选择确认保留，选择取消将同时删除引导卷。') ? 1 : 0;
-  await runAction('终止实例', actionKey('terminate', id), async () => {
-    await apiPost('/oci/terminateInstance', {
-      ociCfgId: selectedCfgId.value,
-      instanceId: id,
-      preserveBootVolume,
-      captcha
-    });
+  if (!id) return;
+  openActionDialog({
+    title: '终止实例 - 发送验证码',
+    description: '第一步会向通知渠道发送终止验证码。收到验证码后继续填写并确认终止。',
+    target: instanceLabel(instance),
+    actionLabel: '发送终止验证码',
+    busyKey: actionKey('captcha', id),
+    danger: true,
+    refreshDetail: false,
+    fields: [],
+    onConfirm: async () => {
+      await apiPost('/oci/sendCaptcha', { ociCfgId: selectedCfgId.value, instanceId: id });
+    },
+    afterSuccess: () => {
+      openActionDialog({
+        title: '终止实例',
+        description: '请输入刚收到的验证码。终止实例是高危操作，请再次确认目标实例。',
+        target: instanceLabel(instance),
+        actionLabel: '终止实例',
+        busyKey: actionKey('terminate', id),
+        danger: true,
+        fields: [
+          { key: 'captcha', label: '终止验证码', value: '', placeholder: '请输入验证码' },
+          { key: 'preserveBootVolume', label: '保留引导卷', value: true, type: 'checkbox' }
+        ],
+        onConfirm: async (values) => {
+          const captcha = dialogString(values, 'captcha');
+          if (!captcha) throw new Error('请填写终止验证码');
+          await apiPost('/oci/terminateInstance', {
+            ociCfgId: selectedCfgId.value,
+            instanceId: id,
+            preserveBootVolume: dialogBoolean(values, 'preserveBootVolume') ? 1 : 0,
+            captcha
+          });
+        }
+      });
+    }
   });
 }
 
@@ -771,6 +1030,59 @@ onMounted(load);
           </ul>
         </section>
       </div>
+    </div>
+
+    <div v-if="actionDialog" class="wd-dialog-backdrop" @click.self="closeActionDialog">
+      <form class="wd-dialog" :class="{ danger: actionDialog.danger }" @submit.prevent="submitActionDialog">
+        <header>
+          <div>
+            <span>{{ actionDialog.danger ? '高危操作确认' : '操作确认' }}</span>
+            <h3>{{ actionDialog.title }}</h3>
+          </div>
+          <button type="button" class="ghost" @click="closeActionDialog">关闭</button>
+        </header>
+
+        <p>{{ actionDialog.description }}</p>
+
+        <div v-if="actionDialog.target" class="wd-dialog-target">
+          <span>目标</span>
+          <strong>{{ actionDialog.target }}</strong>
+        </div>
+
+        <div v-if="actionDialog.fields.length" class="wd-dialog-fields">
+          <label v-for="field in actionDialog.fields" :key="field.key" :class="{ checkbox: field.type === 'checkbox' }">
+            <template v-if="field.type === 'checkbox'">
+              <input :checked="Boolean(field.value)" type="checkbox" @change="updateDialogCheckbox(field, $event)" />
+              <span>{{ field.label }}</span>
+            </template>
+            <template v-else>
+              <span>{{ field.label }}</span>
+              <textarea
+                v-if="field.type === 'textarea'"
+                :value="dialogFieldText(field)"
+                :placeholder="field.placeholder"
+                @input="updateDialogField(field, $event)"
+              ></textarea>
+              <input
+                v-else
+                :value="dialogFieldText(field)"
+                :type="field.type || 'text'"
+                :min="field.min"
+                :placeholder="field.placeholder"
+                @input="updateDialogField(field, $event)"
+              />
+            </template>
+            <small v-if="field.help">{{ field.help }}</small>
+          </label>
+        </div>
+
+        <footer>
+          <button type="button" class="ghost" @click="closeActionDialog">取消</button>
+          <button type="submit" :class="{ danger: actionDialog.danger }" :disabled="Boolean(actionBusy)">
+            {{ actionBusy ? '提交中...' : actionDialog.actionLabel }}
+          </button>
+        </footer>
+      </form>
     </div>
   </section>
 </template>

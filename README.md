@@ -24,6 +24,7 @@ bash <(wget -qO- https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=change_me_to_strong_password
 TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_BOT_CHAT_ID=your_chat_id
 ```
 
 然后重启：
@@ -48,6 +49,7 @@ docker compose up -d --force-recreate
 - 2026-05-17 完成代码审计第一轮：核对前后端 API 映射、Vue 路由、TGBOT 回调覆盖、OCI 实时详情入口和新增运维能力，修复 MFA 登录缺口、配置新增/实时详情、TGBOT 回调前缀冲突、分页/创建实例返回按钮无处理器、TGBOT 运维中心审计/主机概览入口。
 - 2026-05-17 完成前端操作审计页原生化：新增 `/dashboard/ops-audit`，接入 `/api/ops/audit/recent`，支持审计摘要、搜索、状态筛选、条数切换和详情查看。
 - 2026-05-18 修复 Web/TGBOT 一键更新链路：安装脚本默认启动 `king-detective-watcher`，后端检测 watcher 心跳，更新失败会给明确提示；同时修复诊断页 Telegram 误报、按钮卡字和登录阶段同步查 GitHub 导致的卡顿。
+- 2026-05-18 继续完成前端交互打磨：资源页真实 OCI 高危操作、任务停止/批量停止和顶部版本更新均改为页面内确认弹窗/状态提示，移除浏览器原生 `prompt/confirm/alert`；TGBOT 启动和诊断新增 `TELEGRAM_CHAT_ID` 环境变量兜底，减少“已配置但误报未配置”的情况。
 
 当前仍未完成、后续必须重点推进：
 
@@ -85,7 +87,7 @@ npm --prefix frontend run build
 
 后续仍建议继续完善：
 
-- 把配置页的 prompt/confirm 操作逐步升级为页面内弹窗表单，进一步减少浏览器原生弹窗带来的割裂感。
+- 继续把更多高频按钮补齐提交中、成功、失败和空状态反馈，尤其是 OCI 批量操作、筛选查询和运维终端的大文件操作。
 - 给高危 OCI 操作增加更细的二次确认和操作审计字段，例如实例 OCID、配置名、操作者、参数快照。
 - 实例列表增加批量选择和批量操作策略，例如批量启动/停止/改名模板/批量换 IP。
 - TGBOT 下一步可继续做“选择配置 -> 选择实例 -> 执行动作”的完整实例操作向导，目前本版本优先完成运维中心概览和跳转入口。

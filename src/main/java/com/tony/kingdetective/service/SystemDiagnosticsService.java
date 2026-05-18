@@ -38,8 +38,10 @@ public class SystemDiagnosticsService {
     @Value("${web.password:}")
     private String adminPassword;
 
-    @Value("${telegram.bot.token:}")
+    @Value("${telegram.bot.token:${TELEGRAM_BOT_TOKEN:${BOT_TOKEN:}}}")
     private String telegramToken;
+    @Value("${telegram.bot.chat-id:${TELEGRAM_BOT_CHAT_ID:${TELEGRAM_CHAT_ID:${TG_CHAT_ID:}}}}")
+    private String telegramChatId;
 
     public SystemDiagnosticsService(DataSource dataSource, IOciKvService kvService) {
         this.dataSource = dataSource;
@@ -129,7 +131,7 @@ public class SystemDiagnosticsService {
 
     private SystemDiagnostics.CheckItem checkTelegramBot() {
         String token = firstNonBlank(telegramToken, getCfgValue(SysCfgEnum.SYS_TG_BOT_TOKEN));
-        String chatId = getCfgValue(SysCfgEnum.SYS_TG_CHAT_ID);
+        String chatId = firstNonBlank(telegramChatId, getCfgValue(SysCfgEnum.SYS_TG_CHAT_ID));
         if (isBlank(token) && isBlank(chatId)) {
             return item("telegram-bot", "WARN", "Telegram Bot 未配置，相关能力不可用");
         }

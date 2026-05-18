@@ -10,6 +10,7 @@ import com.tony.kingdetective.enums.SysCfgEnum;
 import com.tony.kingdetective.service.IMessageService;
 import com.tony.kingdetective.service.IOciKvService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
@@ -32,6 +33,12 @@ public class TgMessageServiceImpl implements IMessageService {
     @Resource
     private IOciKvService kvService;
 
+    @Value("${telegram.bot.token:${TELEGRAM_BOT_TOKEN:${BOT_TOKEN:}}}")
+    private String telegramBotToken;
+
+    @Value("${telegram.bot.chat-id:${TELEGRAM_BOT_CHAT_ID:${TELEGRAM_CHAT_ID:${TG_CHAT_ID:}}}}")
+    private String telegramChatId;
+
     private static final String TG_URL = "https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s";
     private static final String TG_SEND_URL = "https://api.telegram.org/bot%s/sendMessage";
 
@@ -39,21 +46,36 @@ public class TgMessageServiceImpl implements IMessageService {
     public void sendMessage(String message) {
         OciKv tgToken = kvService.getOne(new LambdaQueryWrapper<OciKv>().eq(OciKv::getCode, SysCfgEnum.SYS_TG_BOT_TOKEN.getCode()));
         OciKv tgChatId = kvService.getOne(new LambdaQueryWrapper<OciKv>().eq(OciKv::getCode, SysCfgEnum.SYS_TG_CHAT_ID.getCode()));
+        String botToken = firstNonBlank(kvValue(tgToken), telegramBotToken);
+        String chatId = firstNonBlank(kvValue(tgChatId), telegramChatId);
 
-        if (null != tgToken && StrUtil.isNotBlank(tgToken.getValue()) &&
-                null != tgChatId && StrUtil.isNotBlank(tgChatId.getValue())) {
-            doSend(message, tgToken.getValue(), tgChatId.getValue());
+        if (StrUtil.isNotBlank(botToken) && StrUtil.isNotBlank(chatId)) {
+            doSend(message, botToken, chatId);
         }
     }
 
     public void sendVersionUpdateMessage(String message) {
         OciKv tgToken = kvService.getOne(new LambdaQueryWrapper<OciKv>().eq(OciKv::getCode, SysCfgEnum.SYS_TG_BOT_TOKEN.getCode()));
         OciKv tgChatId = kvService.getOne(new LambdaQueryWrapper<OciKv>().eq(OciKv::getCode, SysCfgEnum.SYS_TG_CHAT_ID.getCode()));
+        String botToken = firstNonBlank(kvValue(tgToken), telegramBotToken);
+        String chatId = firstNonBlank(kvValue(tgChatId), telegramChatId);
 
-        if (null != tgToken && StrUtil.isNotBlank(tgToken.getValue()) &&
-                null != tgChatId && StrUtil.isNotBlank(tgChatId.getValue())) {
-            doSendWithUpdateButton(message, tgToken.getValue(), tgChatId.getValue());
+        if (StrUtil.isNotBlank(botToken) && StrUtil.isNotBlank(chatId)) {
+            doSendWithUpdateButton(message, botToken, chatId);
         }
+    }
+
+    private String kvValue(OciKv kv) {
+        return kv == null ? null : kv.getValue();
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StrUtil.isNotBlank(value)) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 
     private void doSend(String message, String botToken, String chatId) {

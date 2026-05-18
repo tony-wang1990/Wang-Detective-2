@@ -40,10 +40,14 @@ const latestVersion = ref(localStorage.getItem('latestVersion') || '');
 const updateAvailable = ref(false);
 const versionStatus = ref('');
 const updatingVersion = ref(false);
+const updateConfirmOpen = ref(false);
+const toastMessage = ref('');
+const toastKind = ref<'success' | 'error' | 'info'>('info');
 const sidebarCollapsed = ref(false);
 const globalSearch = ref('');
 let healthTimer: number | undefined;
 let versionTimer: number | undefined;
+let toastTimer: number | undefined;
 
 const navItems = [
   { label: '主页', path: '/dashboard/home', icon: Home, match: ['/dashboard', '/dashboard/home'] },
@@ -88,6 +92,17 @@ function runGlobalSearch() {
   }
 }
 
+function notify(message: string, kind: 'success' | 'error' | 'info' = 'info') {
+  toastMessage.value = message;
+  toastKind.value = kind;
+  if (toastTimer) {
+    window.clearTimeout(toastTimer);
+  }
+  toastTimer = window.setTimeout(() => {
+    toastMessage.value = '';
+  }, 5200);
+}
+
 async function refreshTopStatus() {
   try {
     const health = await getHealth();
@@ -126,23 +141,59 @@ async function refreshVersionInfo() {
   }
 }
 
+function requestVersionUpdate() {
+  if (updateAvailable.value) {
+    updateConfirmOpen.value = true;
+    return;
+  }
+  refreshVersionInfo();
+}
+
 async function triggerVersionUpdate() {
-  if (!updateAvailable.value && !window.confirm('当前没有检测到新版本，仍然触发更新吗？')) {
+  if (!updateAvailable.value) {
+    updateConfirmOpen.value = true;
     return;
   }
   updatingVersion.value = true;
+  updateConfirmOpen.value = false;
   versionStatus.value = '正在触发更新...';
   try {
     const res = await apiPost<string>('/v1/system/trigger-update', {});
     const message = res.msg || res.data || '已触发更新，watcher 将自动拉取并重启服务';
     versionStatus.value = message;
-    window.alert(message);
+    notify(message, 'success');
   } catch (error) {
     const message = error instanceof Error ? error.message : '触发更新失败';
     versionStatus.value = message;
-    window.alert(message);
+    notify(message, 'error');
   } finally {
     updatingVersion.value = false;
+  }
+}
+
+async function forceVersionUpdate() {
+  updatingVersion.value = true;
+  updateConfirmOpen.value = false;
+  versionStatus.value = '正在触发更新...';
+  try {
+    const res = await apiPost<string>('/v1/system/trigger-update', {});
+    const message = res.msg || res.data || '已触发更新，watcher 将自动拉取并重启服务';
+    versionStatus.value = message;
+    notify(message, 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '触发更新失败';
+    versionStatus.value = message;
+    notify(message, 'error');
+  } finally {
+    updatingVersion.value = false;
+  }
+}
+
+function confirmVersionUpdate() {
+  if (updateAvailable.value) {
+    triggerVersionUpdate();
+  } else {
+    forceVersionUpdate();
   }
 }
 
@@ -159,6 +210,9 @@ onBeforeUnmount(() => {
   }
   if (versionTimer) {
     window.clearInterval(versionTimer);
+  }
+  if (toastTimer) {
+    window.clearTimeout(toastTimer);
   }
 });
 </script>
@@ -218,7 +272,7 @@ onBeforeUnmount(() => {
           :class="{ available: updateAvailable }"
           :disabled="updatingVersion"
           :title="versionStatus"
-          @click="updateAvailable ? triggerVersionUpdate() : refreshVersionInfo()"
+          @click="requestVersionUpdate"
         >
           <RefreshCw :size="16" :class="{ spinning: updatingVersion }" />
           {{ updateAvailable ? `更新 ${latestVersion || ''}` : '检查更新' }}
@@ -242,5 +296,38 @@ onBeforeUnmount(() => {
         <RouterView />
       </main>
     </section>
+
+    <div v-if="toastMessage" class="wd-toast" :class="toastKind">
+      {{ toastMessage }}
+    </div>
+
+    <div v-if="updateConfirmOpen" class="wd-dialog-backdrop" @click.self="updateConfirmOpen = false">
+      <form class="wd-dialog" :class="{ danger: !updateAvailable }" @submit.prevent="confirmVersionUpdate">
+        <header>
+          <div>
+            <span>{{ updateAvailable ? '版本更新确认' : '强制更新确认' }}</span>
+            <h3>{{ updateAvailable ? '更新到最新版本' : '当前未检测到新版本' }}</h3>
+          </div>
+          <button type="button" class="ghost" @click="updateConfirmOpen = false">关闭</button>
+        </header>
+        <p>
+          {{
+            updateAvailable
+              ? `将触发 watcher 拉取 ${latestVersion || '最新镜像'} 并重启服务，通常需要 1-3 分钟。`
+              : '未检测到新版本，仍可强制触发 watcher 重新拉取镜像并重启服务。'
+          }}
+        </p>
+        <div class="wd-dialog-target">
+          <span>当前版本</span>
+          <strong>{{ currentVersion }}</strong>
+        </div>
+        <footer>
+          <button type="button" class="ghost" @click="updateConfirmOpen = false">取消</button>
+          <button type="submit" :class="{ danger: !updateAvailable }" :disabled="updatingVersion">
+            {{ updatingVersion ? '触发中...' : updateAvailable ? '确认更新' : '强制更新' }}
+          </button>
+        </footer>
+      </form>
+    </div>
   </div>
 </template>
