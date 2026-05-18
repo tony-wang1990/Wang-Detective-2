@@ -48,6 +48,8 @@ button {
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
   transition:
     transform .12s ease,
     border-color .16s ease,
@@ -276,6 +278,7 @@ textarea:focus-visible {
 }
 
 .wd-top-status,
+.wd-network-indicator,
 .wd-version {
   padding-left: 16px;
   border-left: 1px solid var(--wd-line);
@@ -291,6 +294,20 @@ textarea:focus-visible {
 
 .wd-top-status b.warn {
   color: #f59e0b;
+}
+
+.wd-network-indicator {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--wd-accent) 36%, var(--wd-line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--wd-accent) 9%, var(--wd-surface));
+  color: var(--wd-accent-2);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .wd-update {
@@ -623,6 +640,7 @@ html.dark .wd-leaflet-map .leaflet-tile {
   align-items: center;
   gap: 8px;
   min-width: min(100%, 360px);
+  flex: 1 1 360px;
 }
 
 .wd-table-tools {
@@ -659,6 +677,8 @@ html.dark .wd-leaflet-map .leaflet-tile {
 
 .wd-inline-search button {
   flex: 0 0 auto;
+  min-width: 78px;
+  padding-inline: 14px;
 }
 
 .wd-form-grid textarea,
@@ -763,7 +783,7 @@ html.dark .wd-leaflet-map .leaflet-tile {
 .wd-pager button,
 .wd-row-actions button {
   min-height: 30px;
-  min-width: 64px;
+  min-width: 72px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -779,7 +799,7 @@ html.dark .wd-leaflet-map .leaflet-tile {
 }
 
 .wd-row-actions button {
-  min-width: 58px;
+  min-width: 66px;
 }
 
 .wd-pager select {
@@ -2064,6 +2084,7 @@ html.dark .wd-leaflet-map .leaflet-tile {
 
   .wd-search,
   .wd-top-status,
+  .wd-network-indicator,
   .wd-version,
   .wd-update {
     display: none;

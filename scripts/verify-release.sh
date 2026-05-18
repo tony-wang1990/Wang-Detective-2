@@ -37,6 +37,22 @@ if command -v bash >/dev/null 2>&1; then
     done
 fi
 
+if command -v grep >/dev/null 2>&1; then
+    crlf_files="$(grep -Il $'\r' scripts/*.sh 2>/dev/null || true)"
+    if [ -n "$crlf_files" ]; then
+        printf '%s\n' "$crlf_files"
+        echo "脚本包含 CRLF 换行，请先转换为 LF"
+        exit 1
+    fi
+fi
+
+if command -v rg >/dev/null 2>&1 && [ -d frontend/src ]; then
+    if rg -n "window\\.(alert|confirm|prompt)\\(|\\b(alert|confirm|prompt)\\(" frontend/src; then
+        echo "前端源码仍存在浏览器原生 alert/confirm/prompt，请改为项目内弹窗或 toast"
+        exit 1
+    fi
+fi
+
 if [ "$RUN_SHELLCHECK" = "1" ]; then
     if command -v shellcheck >/dev/null 2>&1; then
         run shellcheck scripts/*.sh

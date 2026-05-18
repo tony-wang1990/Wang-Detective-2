@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { ClipboardList, ExternalLink, RefreshCw, Search, Square, TimerReset } from 'lucide-vue-next';
-import { apiPost, type PageResult } from '../api/http';
+import { apiPost, notifyGlobal, type PageResult } from '../api/http';
 
 type Row = {
   id?: string;
@@ -142,11 +142,13 @@ async function submitStopDialog() {
   try {
     await apiPost('/oci/stopCreateBatch', { idList: current.ids });
     notice.value = current.ids.length > 1 ? '批量停止任务已提交' : '停止任务已提交';
+    notifyGlobal(notice.value, 'success');
     selectedIds.value = selectedIds.value.filter((item) => !current.ids.includes(item));
     confirmDialog.value = null;
     await load();
   } catch (err) {
     error.value = err instanceof Error ? err.message : '停止任务失败';
+    notifyGlobal(error.value, 'error');
   } finally {
     stopping.value = false;
   }

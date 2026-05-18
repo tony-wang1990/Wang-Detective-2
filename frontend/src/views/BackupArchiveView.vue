@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { Archive, CloudUpload, DatabaseBackup, RefreshCw, Trash2 } from 'lucide-vue-next';
-import { apiGet, apiPost, type PageResult } from '../api/http';
+import { apiGet, apiPost, notifyGlobal, type PageResult } from '../api/http';
 
 type OciConfig = {
   id?: string;
@@ -41,6 +41,10 @@ type BackupResult = {
   createTime?: string;
 };
 
+type DeleteConfirm = {
+  objectName: string;
+};
+
 const configs = ref<OciConfig[]>([]);
 const buckets = ref<BucketInfo[]>([]);
 const objects = ref<ObjectInfo[]>([]);
@@ -53,6 +57,7 @@ const loading = ref('');
 const error = ref('');
 const notice = ref('');
 const lastBackup = ref<BackupResult | null>(null);
+const deleteConfirm = ref<DeleteConfirm | null>(null);
 
 const selectedConfig = computed(() => configs.value.find((item) => item.id === selectedConfigId.value));
 const objectCount = computed(() => objects.value.length);
@@ -156,34 +161,41 @@ async function createArchive() {
     });
     lastBackup.value = res.data || null;
     notice.value = uploadToObjectStorage.value ? '备份已生成并上传对象存储' : '本地备份包已生成';
+    notifyGlobal(notice.value, 'success');
     await loadObjects();
   } catch (err) {
     error.value = err instanceof Error ? err.message : '创建备份失败';
+    notifyGlobal(error.value, 'error');
   } finally {
     loading.value = '';
   }
 }
 
-async function deleteObject(item: ObjectInfo) {
+function requestDeleteObject(item: ObjectInfo) {
   if (!item.name) {
     return;
   }
-  const confirmed = window.confirm(`确认删除对象存储文件？\n${item.name}`);
-  if (!confirmed) {
-    return;
-  }
-  loading.value = `delete:${item.name}`;
+  deleteConfirm.value = { objectName: item.name };
+}
+
+async function deleteObject() {
+  const current = deleteConfirm.value;
+  if (!current?.objectName) return;
+  loading.value = `delete:${current.objectName}`;
   error.value = '';
   try {
     await apiPost('/v1/backups/delete-object', {
       ociCfgId: selectedConfigId.value,
       bucketName: selectedBucket.value,
-      objectName: item.name
+      objectName: current.objectName
     });
     notice.value = '对象已删除';
+    notifyGlobal(notice.value, 'success');
+    deleteConfirm.value = null;
     await loadObjects();
   } catch (err) {
     error.value = err instanceof Error ? err.message : '删除对象失败';
+    notifyGlobal(error.value, 'error');
   } finally {
     loading.value = '';
   }
@@ -313,7 +325,7 @@ onMounted(loadConfigs);
               <td>{{ formatTime(item.timeCreated) }}</td>
               <td>{{ item.md5 || '-' }}</td>
               <td>
-                <button type="button" class="wd-link-button" :disabled="loading === `delete:${item.name}`" @click="deleteObject(item)">
+                <button type="button" class="wd-link-button" :disabled="loading === `delete:${item.name}`" @click="requestDeleteObject(item)">
                   <Trash2 :size="14" />删除
                 </button>
               </td>
@@ -325,5 +337,28 @@ onMounted(loadConfigs);
         </table>
       </div>
     </article>
+
+    <div v-if="deleteConfirm" class="wd-dialog-backdrop" @click.self="deleteConfirm = null">
+      <form class="wd-dialog danger" @submit.prevent="deleteObject">
+        <header>
+          <div>
+            <span>对象存储操作确认</span>
+            <h3>删除归档对象</h3>
+          </div>
+          <button type="button" class="ghost" @click="deleteConfirm = null">关闭</button>
+        </header>
+        <p>将从 OCI Object Storage 删除这个归档对象。删除后无法从本页面恢复。</p>
+        <div class="wd-dialog-target">
+          <span>对象名称</span>
+          <strong>{{ deleteConfirm.objectName }}</strong>
+        </div>
+        <footer>
+          <button type="button" class="ghost" @click="deleteConfirm = null">取消</button>
+          <button type="submit" class="danger" :disabled="loading === `delete:${deleteConfirm.objectName}`">
+            {{ loading === `delete:${deleteConfirm.objectName}` ? '删除中...' : '确认删除' }}
+          </button>
+        </footer>
+      </form>
+    </div>
   </section>
 </template>

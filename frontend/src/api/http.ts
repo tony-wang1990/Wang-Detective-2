@@ -48,6 +48,27 @@ export type PageResult<T = Record<string, unknown>> = {
   pages?: number;
 };
 
+type ToastKind = 'success' | 'error' | 'info';
+
+let activeRequests = 0;
+
+function emit(name: string, detail: unknown) {
+  window.dispatchEvent(new CustomEvent(name, { detail }));
+}
+
+function beginNetwork(url: string) {
+  activeRequests += 1;
+  emit('wd:network', { active: true, count: activeRequests, url });
+  return () => {
+    activeRequests = Math.max(0, activeRequests - 1);
+    emit('wd:network', { active: activeRequests > 0, count: activeRequests, url });
+  };
+}
+
+export function notifyGlobal(message: string, kind: ToastKind = 'info') {
+  emit('wd:toast', { message, kind });
+}
+
 function authHeaders(): HeadersInit {
   const token = sessionStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -67,6 +88,15 @@ async function parseResponse<T>(response: Response, url: string): Promise<T> {
     const message = typeof payload === 'object' && payload
       ? (payload as { msg?: string; message?: string }).msg || (payload as { msg?: string; message?: string }).message
       : String(payload || '');
+    if (response.status === 401) {
+      sessionStorage.clear();
+      notifyGlobal('登录已过期，请重新登录', 'error');
+      window.setTimeout(() => {
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+      }, 600);
+    }
     throw new Error(message || `${url} ${response.status}`);
   }
   if (
@@ -81,77 +111,112 @@ async function parseResponse<T>(response: Response, url: string): Promise<T> {
 }
 
 export async function apiGet<T>(url: string): Promise<ApiEnvelope<T>> {
-  const response = await fetch(`/api${url}`, {
-    headers: authHeaders()
-  });
-  return parseResponse<ApiEnvelope<T>>(response, url);
+  const done = beginNetwork(`/api${url}`);
+  try {
+    const response = await fetch(`/api${url}`, {
+      headers: authHeaders()
+    });
+    return await parseResponse<ApiEnvelope<T>>(response, url);
+  } finally {
+    done();
+  }
 }
 
 export async function apiPost<T>(url: string, body: unknown): Promise<ApiEnvelope<T>> {
-  const response = await fetch(`/api${url}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders()
-    },
-    body: JSON.stringify(body)
-  });
-  return parseResponse<ApiEnvelope<T>>(response, url);
+  const done = beginNetwork(`/api${url}`);
+  try {
+    const response = await fetch(`/api${url}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify(body)
+    });
+    return await parseResponse<ApiEnvelope<T>>(response, url);
+  } finally {
+    done();
+  }
 }
 
 export async function apiForm<T>(url: string, form: FormData): Promise<ApiEnvelope<T>> {
-  const response = await fetch(`/api${url}`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: form
-  });
-  return parseResponse<ApiEnvelope<T>>(response, url);
+  const done = beginNetwork(`/api${url}`);
+  try {
+    const response = await fetch(`/api${url}`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: form
+    });
+    return await parseResponse<ApiEnvelope<T>>(response, url);
+  } finally {
+    done();
+  }
 }
 
 export async function opsGet<T>(url: string): Promise<ApiEnvelope<T>> {
-  const response = await fetch(`/api/ops${url}`, {
-    headers: authHeaders()
-  });
-  return parseResponse<ApiEnvelope<T>>(response, url);
+  const done = beginNetwork(`/api/ops${url}`);
+  try {
+    const response = await fetch(`/api/ops${url}`, {
+      headers: authHeaders()
+    });
+    return await parseResponse<ApiEnvelope<T>>(response, url);
+  } finally {
+    done();
+  }
 }
 
 export async function opsPost<T>(url: string, body: unknown): Promise<ApiEnvelope<T>> {
-  const response = await fetch(`/api/ops${url}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders()
-    },
-    body: JSON.stringify(body)
-  });
-  return parseResponse<ApiEnvelope<T>>(response, url);
+  const done = beginNetwork(`/api/ops${url}`);
+  try {
+    const response = await fetch(`/api/ops${url}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify(body)
+    });
+    return await parseResponse<ApiEnvelope<T>>(response, url);
+  } finally {
+    done();
+  }
 }
 
 export async function opsDelete<T>(url: string): Promise<ApiEnvelope<T>> {
-  const response = await fetch(`/api/ops${url}`, {
-    method: 'DELETE',
-    headers: authHeaders()
-  });
-  return parseResponse<ApiEnvelope<T>>(response, url);
+  const done = beginNetwork(`/api/ops${url}`);
+  try {
+    const response = await fetch(`/api/ops${url}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+    return await parseResponse<ApiEnvelope<T>>(response, url);
+  } finally {
+    done();
+  }
 }
 
 export async function opsDownload(url: string, body: unknown): Promise<{ blob: Blob; filename?: string }> {
-  const response = await fetch(`/api/ops${url}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders()
-    },
-    body: JSON.stringify(body)
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `${url} ${response.status}`);
+  const done = beginNetwork(`/api/ops${url}`);
+  try {
+    const response = await fetch(`/api/ops${url}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `${url} ${response.status}`);
+    }
+    return {
+      blob: await response.blob(),
+      filename: response.headers.get('Content-Disposition') || undefined
+    };
+  } finally {
+    done();
   }
-  return {
-    blob: await response.blob(),
-    filename: response.headers.get('Content-Disposition') || undefined
-  };
 }
 
 export async function opsUpload(path: string, hostId: string, file: File): Promise<ApiEnvelope<void>> {
@@ -159,27 +224,42 @@ export async function opsUpload(path: string, hostId: string, file: File): Promi
   form.append('hostId', hostId);
   form.append('path', path);
   form.append('file', file);
-  const response = await fetch('/api/ops/sftp/upload', {
-    method: 'POST',
-    headers: authHeaders(),
-    body: form
-  });
-  return parseResponse<ApiEnvelope<void>>(response, '/sftp/upload');
+  const done = beginNetwork('/api/ops/sftp/upload');
+  try {
+    const response = await fetch('/api/ops/sftp/upload', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: form
+    });
+    return await parseResponse<ApiEnvelope<void>>(response, '/sftp/upload');
+  } finally {
+    done();
+  }
 }
 
 export async function rawGet<T>(url: string): Promise<T> {
-  const response = await fetch(url, {
-    headers: authHeaders()
-  });
-  return parseResponse<T>(response, url);
+  const done = beginNetwork(url);
+  try {
+    const response = await fetch(url, {
+      headers: authHeaders()
+    });
+    return await parseResponse<T>(response, url);
+  } finally {
+    done();
+  }
 }
 
 export async function getHealth(): Promise<HealthData> {
-  const response = await fetch('/actuator/health', {
-    headers: authHeaders()
-  });
-  if (!response.ok) {
-    throw new Error(`health ${response.status}`);
+  const done = beginNetwork('/actuator/health');
+  try {
+    const response = await fetch('/actuator/health', {
+      headers: authHeaders()
+    });
+    if (!response.ok) {
+      throw new Error(`health ${response.status}`);
+    }
+    return response.json();
+  } finally {
+    done();
   }
-  return response.json();
 }

@@ -155,6 +155,44 @@ for file in docker-compose.yml application.yml .env; do
     fi
 done
 
+EXPECTED_SCRIPTS="
+watcher.sh
+server-smoke-test.sh
+backup.sh
+restore.sh
+update.sh
+rollback.sh
+support-bundle.sh
+maintenance.sh
+setup-backup-cron.sh
+verify-release.sh
+"
+
+for script_name in $EXPECTED_SCRIPTS; do
+    script_path="scripts/${script_name}"
+    if [ -d "$script_path" ]; then
+        fail "运维脚本路径异常，是目录不是文件: $script_path"
+    elif [ -f "$script_path" ]; then
+        pass "运维脚本存在: $script_path"
+        if [ -x "$script_path" ]; then
+            pass "运维脚本可执行: $script_path"
+        else
+            warn "运维脚本不可执行: $script_path，可执行 chmod +x scripts/*.sh"
+        fi
+        if grep -Iq . "$script_path" && LC_ALL=C grep -q $'\r' "$script_path"; then
+            fail "运维脚本包含 CRLF 换行，bash 可能报错: $script_path"
+        fi
+    else
+        fail "运维脚本缺失: $script_path"
+    fi
+done
+
+if [ -f src/main/resources/dist/index.html ] || [ -f dist/index.html ]; then
+    pass "前端生产入口存在"
+else
+    warn "未在应用目录发现前端生产入口，容器内镜像可能正常，但当前挂载目录无法直接验证 dist"
+fi
+
 if [ -f docker-compose.yml ]; then
     if grep -q 'ghcr.io/tony-wang1990/wang-detective:main' docker-compose.yml; then
         pass "compose 使用 Wang-Detective GHCR 镜像"
@@ -255,7 +293,7 @@ else
     fail "健康检查不是 UP: $(printf '%s' "$HEALTH_BODY" | cut -c 1-180)"
 fi
 
-for page in /login /dashboard/home /dashboard/user /dashboard/features /dashboard/ops-terminal; do
+for page in /login /dashboard/home /dashboard/user /dashboard/createTask /dashboard/risk /dashboard/backups /dashboard/features /dashboard/ops-terminal /dashboard/ops-audit /dashboard/sysCfg; do
     code="$(http_code "$page")"
     if [ "$code" = "200" ] && grep -q '<div id="app">' "$TMP_DIR/http-code-body"; then
         pass "页面可访问: $page"
@@ -284,6 +322,7 @@ if [ -n "$TOKEN" ]; then
     check_api_success "首页概览" "$(api_get /api/sys/glance "$TOKEN")"
     check_api_success "配置分页" "$(api_post /api/oci/userPage "$TOKEN" '{"currentPage":1,"pageSize":5,"keyword":""}')"
     check_api_success "任务分页" "$(api_post /api/oci/createTaskPage "$TOKEN" '{"currentPage":1,"pageSize":5,"keyword":"","architecture":""}')"
+    check_api_success "OCI 风险看板" "$(api_get /api/v1/oci/risk?maxConfigs=1 "$TOKEN")"
     check_api_success "运维主机列表" "$(api_get /api/ops/ssh/hosts "$TOKEN")"
     check_api_success "最近操作审计" "$(api_get /api/ops/audit/recent?limit=5 "$TOKEN")"
 

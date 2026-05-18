@@ -18,7 +18,7 @@ import {
   UserRound,
   Zap
 } from 'lucide-vue-next';
-import { apiForm, apiPost, type PageResult } from '../api/http';
+import { apiForm, apiPost, notifyGlobal, type PageResult } from '../api/http';
 
 type Row = {
   id?: string;
@@ -231,6 +231,7 @@ async function runAction(label: string, key: string, fn: () => Promise<void>, re
   try {
     await fn();
     notice.value = `${label} 已提交`;
+    notifyGlobal(`${label} 已提交`, 'success');
     if (refreshDetail && selectedDetail.value) {
       await loadDetails(true);
     }
@@ -238,6 +239,7 @@ async function runAction(label: string, key: string, fn: () => Promise<void>, re
     return true;
   } catch (err) {
     error.value = err instanceof Error ? err.message : `${label} 失败`;
+    notifyGlobal(error.value, 'error');
     return false;
   } finally {
     actionBusy.value = '';

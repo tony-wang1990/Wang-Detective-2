@@ -47,6 +47,8 @@ const toastMessage = ref('');
 const toastKind = ref<'success' | 'error' | 'info'>('info');
 const sidebarCollapsed = ref(false);
 const globalSearch = ref('');
+const networkActive = ref(false);
+const networkCount = ref(0);
 let healthTimer: number | undefined;
 let versionTimer: number | undefined;
 let toastTimer: number | undefined;
@@ -105,6 +107,19 @@ function notify(message: string, kind: 'success' | 'error' | 'info' = 'info') {
   toastTimer = window.setTimeout(() => {
     toastMessage.value = '';
   }, 5200);
+}
+
+function handleToast(event: Event) {
+  const detail = (event as CustomEvent<{ message?: string; kind?: 'success' | 'error' | 'info' }>).detail || {};
+  if (detail.message) {
+    notify(detail.message, detail.kind || 'info');
+  }
+}
+
+function handleNetwork(event: Event) {
+  const detail = (event as CustomEvent<{ active?: boolean; count?: number }>).detail || {};
+  networkActive.value = Boolean(detail.active);
+  networkCount.value = Number(detail.count || 0);
 }
 
 async function refreshTopStatus() {
@@ -202,6 +217,8 @@ function confirmVersionUpdate() {
 }
 
 onMounted(() => {
+  window.addEventListener('wd:toast', handleToast);
+  window.addEventListener('wd:network', handleNetwork);
   refreshTopStatus();
   refreshVersionInfo();
   healthTimer = window.setInterval(refreshTopStatus, 60000);
@@ -218,6 +235,8 @@ onBeforeUnmount(() => {
   if (toastTimer) {
     window.clearTimeout(toastTimer);
   }
+  window.removeEventListener('wd:toast', handleToast);
+  window.removeEventListener('wd:network', handleNetwork);
 });
 </script>
 
@@ -268,6 +287,10 @@ onBeforeUnmount(() => {
         <div class="wd-top-status">
           <span class="dot" :class="healthClass"></span>
           系统健康 <b :class="healthClass">{{ healthStatus }}</b>
+        </div>
+        <div v-if="networkActive" class="wd-network-indicator">
+          <RefreshCw :size="14" class="spinning" />
+          请求中 {{ networkCount }}
         </div>
         <div class="wd-version">版本 <b>{{ currentVersion }}</b></div>
         <button
