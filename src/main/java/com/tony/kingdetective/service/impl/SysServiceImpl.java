@@ -231,6 +231,9 @@ public class SysServiceImpl implements ISysService {
                             googleConfig.setAllowedEmails(params.getAllowedEmails());
                             ociKv.setValue(JSONUtil.toJsonStr(googleConfig));
                             break;
+                        case ENABLE_OCI_KEEP_ALIVE:
+                            ociKv.setValue(params.getEnableKeepAlive() != null ? params.getEnableKeepAlive().toString() : "false");
+                            break;
                         default:
                             break;
                     }
@@ -288,6 +291,8 @@ public class SysServiceImpl implements ISysService {
         rsp.setEnableVersionInform(Boolean.valueOf(null == evunValue ? EnableEnum.ON.getCode() : evunValue));
         rsp.setGjAiApi(getCfgValue(SysCfgEnum.SILICONFLOW_AI_API));
         rsp.setBootBroadcastToken(getCfgValue(SysCfgEnum.BOOT_BROADCAST_TOKEN));
+        String ekaValue = getCfgValue(SysCfgEnum.ENABLE_OCI_KEEP_ALIVE);
+        rsp.setEnableKeepAlive(Boolean.valueOf(null == ekaValue ? "false" : ekaValue));
 
         // Parse Google login configuration from JSON
         String googleLoginJson = getCfgValue(SysCfgEnum.GOOGLE_ONE_CLICK_LOGIN);

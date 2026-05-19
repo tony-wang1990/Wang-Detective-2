@@ -39,6 +39,7 @@ type SystemConfig = {
   enableGoogleLogin: boolean;
   googleClientId: string;
   allowedEmails: string;
+  enableKeepAlive: boolean;
 };
 
 const loading = ref(false);
@@ -59,7 +60,8 @@ const cfg = reactive<SystemConfig>({
   bootBroadcastToken: '',
   enableGoogleLogin: false,
   googleClientId: '',
-  allowedEmails: ''
+  allowedEmails: '',
+  enableKeepAlive: false
 });
 const diagnostics = ref<DiagItem[]>([]);
 const raw = ref('');
@@ -102,7 +104,8 @@ function assignConfig(next: Partial<SystemConfig>) {
     bootBroadcastToken: next.bootBroadcastToken || '',
     enableGoogleLogin: Boolean(next.enableGoogleLogin),
     googleClientId: next.googleClientId || '',
-    allowedEmails: next.allowedEmails || ''
+    allowedEmails: next.allowedEmails || '',
+    enableKeepAlive: Boolean(next.enableKeepAlive)
   });
 }
 
@@ -264,6 +267,10 @@ onMounted(() => {
           <label class="wd-switch-row">
             <input v-model="cfg.enableVersionInform" type="checkbox" />
             <span>启用版本更新通知</span>
+          </label>
+          <label class="wd-switch-row wide">
+            <input v-model="cfg.enableKeepAlive" type="checkbox" />
+            <span>启用 OCI 实例自动保活 (SSH 心跳)</span>
           </label>
           <label class="wide">
             <span>AI API Key（保留现有能力，不做体验升级）</span>

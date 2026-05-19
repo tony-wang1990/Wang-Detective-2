@@ -32,6 +32,7 @@ public enum SysCfgEnum {
     BOOT_BROADCAST_CHANNEL("Y114", "TG频道广播地址", SysCfgTypeEnum.SYS_INIT_CFG),
     SYS_VNC("Y112", "实例VNC连接url", SysCfgTypeEnum.SYS_INIT_CFG),
     GOOGLE_ONE_CLICK_LOGIN("Y113", "谷歌一键登录所需参数", SysCfgTypeEnum.SYS_INIT_CFG),
+    ENABLE_OCI_KEEP_ALIVE("Y115", "是否开启OCI实例自动保活", SysCfgTypeEnum.SYS_INIT_CFG),
 
     SYS_INFO_VERSION("Y106", "系统版本号", SysCfgTypeEnum.SYS_INFO),
 

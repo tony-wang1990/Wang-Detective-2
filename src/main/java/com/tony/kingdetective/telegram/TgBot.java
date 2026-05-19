@@ -21,6 +21,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 
 import org.springframework.beans.factory.annotation.Value;
 import java.io.Serializable;
@@ -57,6 +59,22 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         telegramClient = new OkHttpTelegramClient(BOT_TOKEN);
         accountFlowService = SpringUtil.getBean(TgAccountFlowService.class);
         sessionFlowService = SpringUtil.getBean(TgSessionFlowService.class);
+        registerBotCommands();
+    }
+
+    private void registerBotCommands() {
+        try {
+            List<BotCommand> commands = List.of(
+                new BotCommand("menu", "唤出探长主菜单"),
+                new BotCommand("rescue", "进入救援中心"),
+                new BotCommand("terminal", "开启运维终端"),
+                new BotCommand("backup", "备份数据归档")
+            );
+            telegramClient.execute(new SetMyCommands(commands));
+            log.info("Successfully registered Telegram bot commands");
+        } catch (TelegramApiException e) {
+            log.error("Failed to register Telegram bot commands: {}", e.getMessage());
+        }
     }
 
     @Override
@@ -143,10 +161,16 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         // Use virtual thread for command handling to avoid blocking
         Thread.ofVirtual().start(() -> {
             try {
-                if ("/start".equals(command)) {
+                if ("/start".equals(command) || "/menu".equals(command)) {
                     sendMainMenu(chatId);
                 } else if ("/cancel".equals(command)) {
                     handleCancelCommand(chatId);
+                } else if ("/rescue".equals(command)) {
+                    sendRescueMenu(chatId);
+                } else if ("/terminal".equals(command)) {
+                    sendMessage(chatId, "🔗 运维终端暂未提供内联快捷操作，请前往 Web 面板体验全功能终端。");
+                } else if ("/backup".equals(command)) {
+                    sendBackupMenu(chatId);
                 } else if (command.startsWith("/ssh_config ")) {
                     handleSshConfig(chatId, command);
                 } else if (command.startsWith("/ssh ")) {
@@ -813,13 +837,91 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         try {
             telegramClient.execute(SendMessage.builder()
                     .chatId(chatId)
-                    .text("请选择需要执行的操作：")
+                    .text("🕵️‍♂️ *W-探长* 主菜单：")
+                    .parseMode("Markdown")
                     .replyMarkup(InlineKeyboardMarkup.builder()
                             .keyboard(KeyboardBuilder.buildMainMenu())
                             .build())
                     .build());
         } catch (TelegramApiException e) {
             log.error("发送主菜单失败", e);
+        }
+    }
+
+    private void sendRescueMenu(long chatId) {
+        try {
+            String text = "🆘 *救援中心*\n\n" +
+                    "面向 OCI 实例失联、SSH 异常、Boot Volume 修复的应急操作向导。\n\n" +
+                    "⚠️ *高危操作说明*\n" +
+                    "• 自动救援会创建临时救援实例并挂载目标卷\n" +
+                    "• 操作前请确认目标实例数据已备份\n" +
+                    "• 救援完成后请手动检查数据完整性\n\n" +
+                    "📖 *可用操作*\n" +
+                    "• 自动救援 — 自动化拆卷救援流程\n" +
+                    "• 救援指南 — 查看当前救援状态和文档\n\n" +
+                    "请选择操作：";
+            
+            List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow> keyboard = new java.util.ArrayList<>();
+            keyboard.add(new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow(
+                    KeyboardBuilder.button("🚑 发起自动救援", "rescue_choose_account"),
+                    KeyboardBuilder.button("📋 救援指南", "rescue_guide")
+            ));
+            keyboard.add(KeyboardBuilder.buildBackToMainMenuRow());
+            keyboard.add(KeyboardBuilder.buildCancelRow());
+
+            telegramClient.execute(SendMessage.builder()
+                    .chatId(chatId)
+                    .text(text)
+                    .parseMode("Markdown")
+                    .replyMarkup(InlineKeyboardMarkup.builder()
+                            .keyboard(keyboard)
+                            .build())
+                    .build());
+        } catch (TelegramApiException e) {
+            log.error("发送救援菜单失败", e);
+        }
+    }
+
+    private void sendBackupMenu(long chatId) {
+        try {
+            String text = "📦 *备份与恢复*\n\n" +
+                    "💾 功能说明：\n" +
+                    "• 备份：导出系统配置和数据\n" +
+                    "• 恢复：从备份文件恢复系统\n\n" +
+                    "📝 备份内容包括：\n" +
+                    "• OCI 配置信息\n" +
+                    "• 系统设置\n" +
+                    "• 任务配置\n" +
+                    "• 其他重要数据\n\n" +
+                    "🔒 安全选项：\n" +
+                    "• 支持加密备份（推荐）\n" +
+                    "• 保护敏感信息安全\n\n" +
+                    "⚠️ 注意：\n" +
+                    "• 恢复操作会覆盖现有数据\n" +
+                    "• 建议定期备份重要数据\n" +
+                    "• 请妥善保管备份文件\n\n" +
+                    "⚙️ 请选择操作：";
+
+            List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow> keyboard = new java.util.ArrayList<>();
+            keyboard.add(new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow(
+                    KeyboardBuilder.button("💾 创建备份", "backup_create")
+            ));
+            keyboard.add(new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow(
+                    KeyboardBuilder.button("📥 恢复数据", "restore_data")
+            ));
+            keyboard.add(KeyboardBuilder.buildBackToMainMenuRow());
+            keyboard.add(KeyboardBuilder.buildCancelRow());
+
+            telegramClient.execute(SendMessage.builder()
+                    .chatId(chatId)
+                    .text(text)
+                    .parseMode("Markdown")
+                    .replyMarkup(InlineKeyboardMarkup.builder()
+                            .keyboard(keyboard)
+                            .build())
+                    .build());
+        } catch (TelegramApiException e) {
+            log.error("发送备份菜单失败", e);
         }
     }
 

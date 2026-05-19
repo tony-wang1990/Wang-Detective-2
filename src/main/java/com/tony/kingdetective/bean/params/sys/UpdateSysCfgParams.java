@@ -27,4 +27,5 @@ public class UpdateSysCfgParams {
     private Boolean enableGoogleLogin;
     private String googleClientId;
     private String allowedEmails;
+    private Boolean enableKeepAlive;
 }
