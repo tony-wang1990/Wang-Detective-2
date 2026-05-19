@@ -1913,7 +1913,7 @@ html.dark .wd-leaflet-map .leaflet-tile {
 .wd-dialog-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 9999;
   display: grid;
   place-items: center;
   padding: 24px;
@@ -2058,7 +2058,7 @@ html.dark .wd-leaflet-map .leaflet-tile {
   position: fixed;
   right: 22px;
   top: 78px;
-  z-index: 90;
+  z-index: 10000;
   max-width: min(420px, calc(100vw - 44px));
   padding: 12px 14px;
   border: 1px solid var(--wd-line);
