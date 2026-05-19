@@ -1033,9 +1033,16 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     /**
      * 检查用户是否有权限
+     * feat #18: 支持多 Chat ID，CHAT_ID 可配置为逗号分隔的多个ID
+     * 例如: TELEGRAM_CHAT_ID=123456,789012,345678
      */
     private boolean isAuthorized(long chatId) {
-        return CHAT_ID.equals(String.valueOf(chatId));
+        if (CHAT_ID == null || CHAT_ID.isBlank()) return false;
+        String incomingId = String.valueOf(chatId);
+        for (String id : CHAT_ID.split(",")) {
+            if (id.trim().equals(incomingId)) return true;
+        }
+        return false;
     }
 
     /**

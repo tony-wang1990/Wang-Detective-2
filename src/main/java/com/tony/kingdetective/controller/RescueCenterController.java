@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/rescue")
+@RequestMapping("/api/rescue")  // fix #15: 统一路径风格，去掉 /v1 版本前缀
 public class RescueCenterController {
 
     @Value("${king-detective.app-dir:${KING_DETECTIVE_APP_DIR:/app/king-detective}}")

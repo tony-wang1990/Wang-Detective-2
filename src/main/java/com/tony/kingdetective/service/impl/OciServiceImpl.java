@@ -1029,14 +1029,16 @@ public class OciServiceImpl implements IOciService {
             if (sysUserDTO.getCreateNumbers() == outCounts) {
 //                stopAndRemoveTask(sysUserDTO, createTaskService);
 //                log.error("【开机任务】用户:[{}],区域:[{}],系统架构:[{}],开机数量:[{}] 因超额而终止任务...",
-//                        sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
-//                        sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers());
-//                sysService.sendMessage(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 因超额而终止任务",
-//                        sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
-//                        sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers()));
                 sysService.sendMessage(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 官方提示配额已超过限制,但任务未终止",
                         sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                         sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers()));
+            }
+
+            if (leftCreateNum > 0) {
+                createTaskService.update(new LambdaUpdateWrapper<OciCreateTask>()
+                        .eq(OciCreateTask::getId, sysUserDTO.getTaskId())
+                        .set(OciCreateTask::getCreateNumbers, leftCreateNum));
+                sysUserDTO.setCreateNumbers((int) leftCreateNum);
             }
 
             if (sysUserDTO.getCreateNumbers() == successCounts || leftCreateNum == 0) {
@@ -1044,6 +1046,41 @@ public class OciServiceImpl implements IOciService {
                 log.warn("【开机任务】用户:[{}],区域:[{}],系统架构:[{}],开机数量:[{}] 任务结束...",
                         sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                         sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers());
+            }
+
+            // feat #9: 抢机成功主动推送实例公网IP，无需用户手动刷新查询
+            if (successCounts > 0) {
+                try {
+                    StringBuilder ipMsg = new StringBuilder();
+                    ipMsg.append(String.format("开机成功！\n\n"));
+                    ipMsg.append(String.format("账号：%s\n", sysUserDTO.getUsername()));
+                    ipMsg.append(String.format("区域：%s\n", sysUserDTO.getOciCfg().getRegion()));
+                    ipMsg.append(String.format("架构：%s\n", sysUserDTO.getArchitecture()));
+                    ipMsg.append(String.format("成功开机：%d 台\n\n", successCounts));
+
+                    // 收集成功实例的IP信息
+                    List<InstanceDetailDTO> successList = createInstanceList.stream()
+                            .filter(InstanceDetailDTO::isSuccess).collect(Collectors.toList());
+                    for (int idx = 0; idx < successList.size(); idx++) {
+                        InstanceDetailDTO dto = successList.get(idx);
+                        List<String> ips = dto.getPublicIpList();
+                        String ipStr = (ips != null && !ips.isEmpty()) ? String.join(", ", ips) : "获取中...";
+                        ipMsg.append(String.format("实例 %d\n", idx + 1));
+                        ipMsg.append(String.format("  公网IP：%s\n", ipStr));
+                        if (dto.getRootPassword() != null && !dto.getRootPassword().isEmpty()) {
+                            ipMsg.append(String.format("  SSH密码：%s\n", dto.getRootPassword()));
+                        }
+                        if (dto.getShape() != null) {
+                            ipMsg.append(String.format("  Shape：%s\n", dto.getShape()));
+                        }
+                        ipMsg.append("\n");
+                    }
+                    ipMsg.append("SSH端口：22  用户：root");
+                    sysService.sendMessage(ipMsg.toString());
+                    log.info("【开机任务】成功推送实例IP通知：用户={}, 实例数={}", sysUserDTO.getUsername(), successCounts);
+                } catch (Exception notifyEx) {
+                    log.warn("【开机任务】推送IP通知失败，不影响主流程：{}", notifyEx.getMessage());
+                }
             }
 
             if (leftCreateNum > 0) {
