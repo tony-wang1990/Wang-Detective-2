@@ -608,6 +608,7 @@ async function createIpv6(instance: InstanceInfo) {
 
 // VNC 内嵌弹窗状态
 const vncModal = ref<{ show: boolean; url: string; title: string }>({ show: false, url: '', title: '' });
+const vncGuideModal = ref(false);
 
 async function startVnc(instance: InstanceInfo) {
   const id = instanceId(instance);
@@ -625,7 +626,7 @@ async function startVnc(instance: InstanceInfo) {
       // 3. 打开内嵌弹窗
       vncModal.value = { show: true, url: vncUrl, title: `VNC - ${instanceLabel(instance)}` };
     } else {
-      notice.value = 'VNC 隧道已开启，但未配置 noVNC URL，请先在 TG Bot 中使用 VNC配置 功能设置地址。';
+      vncGuideModal.value = true;
     }
   }, false);
 }
@@ -1102,6 +1103,26 @@ onMounted(load);
       </form>
     </div>
   </section>
+
+  <!-- VNC 未配置引导弹窗 -->
+  <div v-if="vncGuideModal" class="wd-vnc-overlay" @click.self="vncGuideModal = false">
+    <div class="wd-vnc-modal" style="width: 480px; height: auto; padding: 24px; color: #e2e8f0;">
+      <h3 style="margin-top: 0; color: #fff; font-weight: 500;">VNC 隧道已开启</h3>
+      <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+        后端的 VNC SSH 隧道已建立（映射在 <code>0.0.0.0:5900</code>），但您尚未配置 <strong>noVNC URL</strong>，无法在此页面内嵌访问。
+      </p>
+      <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #cbd5e1;">如何配置？</h4>
+      <ol style="margin: 0 0 24px 0; padding-left: 20px; font-size: 14px; color: #94a3b8; line-height: 1.8;">
+        <li>打开 Telegram Bot</li>
+        <li>发送 <code>/menu</code> 打开主菜单</li>
+        <li>点击 <strong>VNC配置</strong> 按钮</li>
+        <li>输入您的 noVNC 代理地址<br>(例如: <code>http://your-server:6080</code>)</li>
+      </ol>
+      <div style="text-align: right;">
+        <button class="wd-vnc-btn" @click="vncGuideModal = false">我知道了</button>
+      </div>
+    </div>
+  </div>
 
   <!-- VNC 内嵌弹窗 -->
   <div v-if="vncModal.show" class="wd-vnc-overlay" @click.self="vncModal.show = false">

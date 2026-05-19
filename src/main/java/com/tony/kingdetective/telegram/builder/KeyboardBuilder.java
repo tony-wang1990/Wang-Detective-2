@@ -169,24 +169,30 @@ public class KeyboardBuilder {
                 ),
                 new InlineKeyboardRow(
                         InlineKeyboardButton.builder()
-                                .text("VNCé…ç½®")
+                                .text("VNCé… ç½®")
                                 .callbackData("vnc_config")
                                 .build(),
                         InlineKeyboardButton.builder()
-                                .text("å¤‡ä»½æ¢å¤")
+                                .text("å¤‡ä»½æ ¢å¤ ")
                                 .callbackData("backup_restore")
                                 .build(),
                         InlineKeyboardButton.builder()
-                                .text("AIèŠå¤©")
-                                .callbackData("ai_chat")
+                                .text("🆘 救援中心")
+                                .callbackData("rescue_center")
                                 .build(),
                         InlineKeyboardButton.builder()
-                                .text("é€šçŸ¥é¢‘é“")
+                                .text("AIè Šå¤©")
+                                .callbackData("ai_chat")
+                                .build()
+                ),
+                new InlineKeyboardRow(
+                        InlineKeyboardButton.builder()
+                                .text("é€šçŸ¥é¢‘é “")
                                 .url("https://t.me/Woci_detective")
                                 .build()
                 ),
 
-                // ========== ðŸ”—å¤–éƒ¨é“¾æŽ¥ ==========
+                // ========== 🔗å¤–éƒ¨é“¾æŽ¥ ==========
                 new InlineKeyboardRow(
                         InlineKeyboardButton.builder()
                                 .text("æ”¾è´§æŸ¥è¯¢")
