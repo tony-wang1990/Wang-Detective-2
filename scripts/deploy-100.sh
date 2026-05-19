@@ -1,149 +1,149 @@
 #!/bin/bash
-# King-Detective 100鍒嗙増鏈揩閫熼儴缃茶剼鏈?
+# King-Detective 100分版本快速部署脚本
 
 set -e
 
-echo "馃弳 King-Detective v2.0 - 100鍒嗙増鏈儴缃?
+echo "🏆 King-Detective v2.0 - 100分版本部署"
 echo "========================================"
 echo ""
 
-# 棰滆壊瀹氫箟
+# 颜色定义
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# 妫€鏌ユ槸鍚﹀湪椤圭洰鏍圭洰褰?
+# 检查是否在项目根目录
 if [ ! -f "pom.xml" ]; then
-    echo -e "${RED}鉂?閿欒: 璇峰湪椤圭洰鏍圭洰褰曡繍琛屾鑴氭湰${NC}"
+    echo -e "${RED}❌ 错误: 请在项目根目录运行此脚本${NC}"
     exit 1
 fi
 
-echo -e "${YELLOW}馃搵 閮ㄧ讲鍓嶆鏌?..${NC}"
+echo -e "${YELLOW}📋 部署前检查...${NC}"
 echo ""
 
-# 1. 妫€鏌ョ幆澧冨彉閲?
+# 1. 检查环境变量
 if [ ! -f ".env" ]; then
-    echo -e "${RED}鉂?閿欒: .env鏂囦欢涓嶅瓨鍦?{NC}"
-    echo "璇峰厛鍒涘缓.env鏂囦欢锛屽弬鑰?env.example"
+    echo -e "${RED}❌ 错误: .env文件不存在${NC}"
+    echo "请先创建.env文件，参考 env.example"
     exit 1
 fi
 
-echo -e "${GREEN}鉁?.env鏂囦欢瀛樺湪${NC}"
+echo -e "${GREEN}✅ .env文件存在${NC}"
 
-# 2. 妫€鏌oken
+# 2. 检查Token
 if ! grep -q "TELEGRAM_BOT_TOKEN=" .env || grep -q "TELEGRAM_BOT_TOKEN=$" .env; then
-    echo -e "${RED}鉂?閿欒: TELEGRAM_BOT_TOKEN鏈缃?{NC}"
+    echo -e "${RED}❌ 错误: TELEGRAM_BOT_TOKEN未配置${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}鉁?Telegram Token宸查厤缃?{NC}"
+echo -e "${GREEN}✅ Telegram Token已配置${NC}"
 
-# 3. 浼樺寲鏁版嵁搴?
+# 3. 优化数据库
 echo ""
-echo -e "${YELLOW}馃搳 浼樺寲鏁版嵁搴?..${NC}"
+echo -e "${YELLOW}📊 优化数据库...${NC}"
 
 if [ -f "data/king-detective.db" ]; then
-    echo "鎵ц鏁版嵁搴撲紭鍖?.."
+    echo "执行数据库优化..."
     sqlite3 data/king-detective.db < docs/database_optimization.sql 2>/dev/null || true
-    echo -e "${GREEN}鉁?鏁版嵁搴撲紭鍖栧畬鎴?{NC}"
+    echo -e "${GREEN}✅ 数据库优化完成${NC}"
 else
-    echo -e "${YELLOW}鈿狅笍  鏁版嵁搴撲笉瀛樺湪锛岄娆¤繍琛屽皢鑷姩鍒涘缓${NC}"
+    echo -e "${YELLOW}⚠️  数据库不存在，首次运行将自动创建${NC}"
 fi
 
-# 4. 妫€鏌ュ畨鍏ㄨ〃
+# 4. 检查安全表
 echo ""
-echo -e "${YELLOW}馃敀 妫€鏌ュ畨鍏ㄨ〃...${NC}"
+echo -e "${YELLOW}🔐 检查安全表...${NC}"
 
 if [ -f "data/king-detective.db" ]; then
-    # 妫€鏌p_blacklist琛ㄦ槸鍚﹀瓨鍦?
+    # 检查ip_blacklist表是否存在
     TABLE_EXISTS=$(sqlite3 data/king-detective.db "SELECT name FROM sqlite_master WHERE type='table' AND name='ip_blacklist';" 2>/dev/null || echo "")
-    
+
     if [ -z "$TABLE_EXISTS" ]; then
-        echo "鍒涘缓瀹夊叏琛?.."
+        echo "创建安全表..."
         sqlite3 data/king-detective.db < docs/security_tables.sql
-        echo -e "${GREEN}鉁?瀹夊叏琛ㄥ垱寤哄畬鎴?{NC}"
+        echo -e "${GREEN}✅ 安全表创建完成${NC}"
     else
-        echo -e "${GREEN}鉁?瀹夊叏琛ㄥ凡瀛樺湪${NC}"
+        echo -e "${GREEN}✅ 安全表已存在${NC}"
     fi
 fi
 
-# 5. 澶囦唤鏃х増鏈紙濡傛灉瀛樺湪锛?
+# 5. 备份旧版本（如果存在）
 echo ""
-echo -e "${YELLOW}馃捑 澶囦唤褰撳墠鏁版嵁...${NC}"
+echo -e "${YELLOW}💾 备份当前数据...${NC}"
 
 if [ -f "data/king-detective.db" ]; then
     BACKUP_DIR="backups"
     mkdir -p "$BACKUP_DIR"
     BACKUP_FILE="$BACKUP_DIR/king-detective-$(date +%Y%m%d-%H%M%S).db"
     cp data/king-detective.db "$BACKUP_FILE"
-    echo -e "${GREEN}鉁?鏁版嵁搴撳凡澶囦唤鍒? $BACKUP_FILE${NC}"
+    echo -e "${GREEN}✅ 数据库已备份到: $BACKUP_FILE${NC}"
 fi
 
-# 6. 鏋勫缓闀滃儚
+# 6. 构建镜像
 echo ""
-echo -e "${YELLOW}馃敤 鏋勫缓Docker闀滃儚...${NC}"
+echo -e "${YELLOW}🔨 构建Docker镜像...${NC}"
 
 docker-compose build
 
-echo -e "${GREEN}鉁?闀滃儚鏋勫缓瀹屾垚${NC}"
+echo -e "${GREEN}✅ 镜像构建完成${NC}"
 
-# 7. 鍋滄鏃у鍣?
+# 7. 停止旧容器
 echo ""
-echo -e "${YELLOW}馃洃 鍋滄鏃у鍣?..${NC}"
+echo -e "${YELLOW}🛑 停止旧容器...${NC}"
 
 docker-compose down
 
-# 8. 鍚姩鏂板鍣?
+# 8. 启动新容器
 echo ""
-echo -e "${YELLOW}馃殌 鍚姩鏂板鍣?..${NC}"
+echo -e "${YELLOW}🚀 启动新容器...${NC}"
 
 docker-compose up -d
 
-# 9. 绛夊緟鏈嶅姟鍚姩
+# 9. 等待服务启动
 echo ""
-echo -e "${YELLOW}鈴?绛夊緟鏈嶅姟鍚姩...${NC}"
+echo -e "${YELLOW}⏳ 等待服务启动...${NC}"
 
 sleep 5
 
-# 10. 楠岃瘉鏈嶅姟
+# 10. 验证服务
 echo ""
-echo -e "${YELLOW}馃攳 楠岃瘉鏈嶅姟...${NC}"
+echo -e "${YELLOW}🔍 验证服务...${NC}"
 
 if docker ps | grep -q "king-detective"; then
-    echo -e "${GREEN}鉁?瀹瑰櫒杩愯涓?{NC}"
+    echo -e "${GREEN}✅ 容器运行中${NC}"
 else
-    echo -e "${RED}鉂?瀹瑰櫒鏈繍琛?{NC}"
-    echo "鏌ョ湅鏃ュ織: docker logs king-detective"
+    echo -e "${RED}❌ 容器未运行${NC}"
+    echo "查看日志: docker logs king-detective"
     exit 1
 fi
 
-# 11. 妫€鏌ユ棩蹇?
+# 11. 检查日志
 echo ""
-echo -e "${YELLOW}馃搵 妫€鏌ュ惎鍔ㄦ棩蹇?..${NC}"
+echo -e "${YELLOW}📋 检查启动日志...${NC}"
 docker logs --tail=20 king-detective
 
-# 12. 瀹屾垚
+# 12. 完成
 echo ""
 echo -e "${GREEN}========================================"
-echo "鉁?閮ㄧ讲瀹屾垚锛?
+echo "✅ 部署完成！"
 echo "========================================${NC}"
 echo ""
-echo "馃搵 涓嬩竴姝ユ搷浣?"
-echo "1. 娴嬭瘯Telegram Bot: 鍙戦€?/start"
-echo "2. 璁块棶Web绔? http://localhost:9527"
-echo "3. 鏌ョ湅鏃ュ織: docker logs -f king-detective"
-echo "4. 鐩戞帶鐘舵€? docker stats king-detective"
+echo "📋 下一步操作"
+echo "1. 测试Telegram Bot: 发送 /start"
+echo "2. 访问Web端: http://localhost:9527"
+echo "3. 查看日志: docker logs -f king-detective"
+echo "4. 监控状态: docker stats king-detective"
 echo ""
-echo "馃搳 鎬ц兘鎻愬崌:"
-echo "- 鍝嶅簲閫熷害鎻愬崌 3-5鍊?
-echo "- 鏁版嵁搴撴煡璇㈠噺灏?70%"
-echo "- 缂撳瓨鍛戒腑鐜?70%+"
+echo "📊 性能提升:"
+echo "- 响应速度提升 3-5倍"
+echo "- 数据库查询减少70%"
+echo "- 缓存命中率70%+"
 echo ""
-echo "馃弳 褰撳墠璇勫垎: 100/100 (A++ 瀹岀編)"
+echo "🏆 当前评分: 100/100 (A++ 完美)"
 echo ""
-echo "馃摎 鏇村淇℃伅:"
-echo "- API鏂囨。: docs/API.md"
-echo "- 閮ㄧ讲鎸囧崡: docs/DEPLOYMENT.md"
+echo "📚 更多信息:"
+echo "- API文档: docs/API.md"
+echo "- 部署指南: docs/DEPLOYMENT.md"
 echo "- FAQ: docs/FAQ.md"
 echo ""
