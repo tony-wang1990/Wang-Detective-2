@@ -245,11 +245,11 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
                 org.telegram.telegrambots.meta.api.methods.send.SendDocument.builder()
                     .chatId(chatId)
                     .document(new org.telegram.telegrambots.meta.api.objects.InputFile(backupFile))
-                    .caption("📦 *加密备份*\n创建时间：" +
+                    .caption(MarkdownFormatter.formatMarkdown("📦 *加密备份*\n创建时间：" +
                         java.time.LocalDateTime.now().format(
                             java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) +
-                        "\n\n恢复时需要输入密码，请妥善保管。")
-                    .parseMode("Markdown").build();
+                        "\n\n恢复时需要输入密码，请妥善保管。"))
+                    .parseMode("MarkdownV2").build();
             telegramClient.execute(doc);
             sessionFlowService.deleteBackupFile(backupFilePath);
             configStorage.clearSession(chatId);
@@ -723,20 +723,18 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         String helpText =
                 "📖 *命令帮助*\n\n" +
                         "*基础命令：*\n" +
-                        "├ `/start` - 显示主菜单\n" +
-                        "├ `/help` - 显示此帮助信息\n\n" +
+                        "├ `/start` \\\- 显示主菜单\n" +
+                        "├ `/help` \\\- 显示此帮助信息\n\n" +
                         "*AI 聊天：*\n" +
                         "├ 直接发送消息即可与 AI 对话\n" +
-                        "├ 在主菜单选择 \"AI 聊天\" 进行设置\n\n" +
+                        "├ 在主菜单选择 AI 聊天 进行设置\n\n" +
                         "*SSH 管理：*\n" +
-                        "├ `/ssh_config host port user pwd` - 配置连接\n" +
-                        "├ `/ssh [命令]` - 执行 SSH 命令\n" +
-                        "└ 示例: `/ssh ls -la`\n\n" +
+                        "├ `/ssh_config host port user pwd` \\\- 配置连接\n" +
+                        "├ `/ssh 命令` \\\- 执行 SSH 命令\n" +
+                        "└ 示例: `/ssh ls \\\-la`\n\n" +
                         "💡 更多功能请点击 /start 查看主菜单";
 
-        // Format and send with Markdown enabled
-        String formattedText = MarkdownFormatter.formatMarkdown(helpText);
-        sendMessage(chatId, formattedText, true);
+        sendMessage(chatId, helpText, true);
     }
 
     /**
@@ -837,8 +835,8 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         try {
             telegramClient.execute(SendMessage.builder()
                     .chatId(chatId)
-                    .text("🕵️‍♂️ *W-探长* 主菜单：")
-                    .parseMode("Markdown")
+                    .text(MarkdownFormatter.formatMarkdown("🕵️\u200d\u2642️ *W\-探长* 主菜单："))
+                    .parseMode("MarkdownV2")
                     .replyMarkup(InlineKeyboardMarkup.builder()
                             .keyboard(KeyboardBuilder.buildMainMenu())
                             .build())
@@ -871,8 +869,8 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
             telegramClient.execute(SendMessage.builder()
                     .chatId(chatId)
-                    .text(text)
-                    .parseMode("Markdown")
+                    .text(MarkdownFormatter.formatMarkdown(text))
+                    .parseMode("MarkdownV2")
                     .replyMarkup(InlineKeyboardMarkup.builder()
                             .keyboard(keyboard)
                             .build())
@@ -914,8 +912,8 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
             telegramClient.execute(SendMessage.builder()
                     .chatId(chatId)
-                    .text(text)
-                    .parseMode("Markdown")
+                    .text(MarkdownFormatter.formatMarkdown(text))
+                    .parseMode("MarkdownV2")
                     .replyMarkup(InlineKeyboardMarkup.builder()
                             .keyboard(keyboard)
                             .build())
@@ -934,33 +932,33 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
      */
     private void sendMessage(long chatId, String text, boolean enableMarkdown) {
         try {
-            // Truncate message if too long
-            String truncatedText = MarkdownFormatter.truncate(text);
+            String finalText;
+            if (enableMarkdown) {
+                finalText = MarkdownFormatter.truncate(MarkdownFormatter.formatMarkdown(text));
+            } else {
+                finalText = MarkdownFormatter.truncate(text);
+            }
 
             SendMessage.SendMessageBuilder builder = SendMessage.builder()
                     .chatId(chatId)
-                    .text(truncatedText);
+                    .text(finalText);
 
-            // Enable Markdown only if requested
             if (enableMarkdown) {
-                builder.parseMode("Markdown");
+                builder.parseMode("MarkdownV2");
             }
 
             telegramClient.execute(builder.build());
         } catch (TelegramApiException e) {
-            log.error("发送消息失败: text={}", text, e);
-
-            // Fallback: try sending without Markdown
-            if (enableMarkdown) {
-                try {
-                    telegramClient.execute(SendMessage.builder()
-                            .chatId(chatId)
-                            .text(text)
-                            .build());
-                    log.info("消息重新发送成功（不使用 Markdown）");
-                } catch (TelegramApiException fallbackEx) {
-                    log.error("消息重新发送也失败", fallbackEx);
-                }
+            log.error("发送消息失败 (enableMarkdown={}): {}", enableMarkdown, e.getMessage());
+            // Fallback：纯文本重试
+            try {
+                telegramClient.execute(SendMessage.builder()
+                        .chatId(chatId)
+                        .text(MarkdownFormatter.truncate(text))
+                        .build());
+                log.info("消息 fallback 纯文本发送成功");
+            } catch (TelegramApiException fallbackEx) {
+                log.error("消息 fallback 发送也失败", fallbackEx);
             }
         }
     }

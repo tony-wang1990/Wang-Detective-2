@@ -26,7 +26,7 @@ public abstract class AbstractCallbackHandler implements CallbackHandler {
                 .chatId(callbackQuery.getMessage().getChatId())
                 .messageId(toIntExact(callbackQuery.getMessage().getMessageId()))
                 .text(text)
-                .parseMode("Markdown")  // Enable Markdown parsing
+                .parseMode("MarkdownV2")  // 使用 MarkdownV2，需配合 MarkdownFormatter 转义
                 .replyMarkup(markup)
                 .build();
     }
