@@ -74,7 +74,7 @@ public class RescueCenterController {
                 echo "[最近错误]"
                 journalctl -p warning..alert --no-pager -n 120 2>/dev/null || true
                 echo "=== 检查完成 ==="
-                """);
+                """, "请求成功");
     }
 
     @GetMapping("/netboot-script")
@@ -114,7 +114,7 @@ public class RescueCenterController {
                     echo "后续可在测试机验证后，按系统类型生成一次性 grub-reboot 菜单。"
                     """;
         }
-        return ResponseData.successData(script);
+        return ResponseData.successData(script, "请求成功");
     }
 
     private List<Map<String, String>> lightRescueItems() {

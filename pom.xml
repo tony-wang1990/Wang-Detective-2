@@ -11,7 +11,7 @@
          - minor (次版本号): 需手动更新 pom.xml (新功能、向后兼容)
          - major (主版本号): 需手动更新 pom.xml (重大更新、不兼容变更)
     -->
-    <version>4.1.5</version>
+    <version>4.1.6</version>
     <name>king-detective</name>
     <description>King Detective - OCI management panel and Telegram bot</description>
     <properties>
