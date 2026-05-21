@@ -973,11 +973,21 @@ public class OciServiceImpl implements IOciService {
     }
 
     public static void addTask(String taskId, Runnable task, long initialDelay, long period, TimeUnit timeUnit) {
+        // 先取消同名旧任务，防止重复调度
+        ScheduledFuture<?> old = TASK_MAP.get(taskId);
+        if (old != null) {
+            old.cancel(false);
+        }
         ScheduledFuture<?> future = CREATE_INSTANCE_POOL.scheduleWithFixedDelay(() -> VIRTUAL_EXECUTOR.execute(task), initialDelay, period, timeUnit);
         TASK_MAP.put(taskId, future);
     }
 
     public static void addAtFixedRateTask(String taskId, Runnable task, long initialDelay, long period, TimeUnit timeUnit) {
+        // 先取消同名旧任务，防止重复调度
+        ScheduledFuture<?> old = TASK_MAP.get(taskId);
+        if (old != null) {
+            old.cancel(false);
+        }
         ScheduledFuture<?> future = CREATE_INSTANCE_POOL.scheduleAtFixedRate(() -> VIRTUAL_EXECUTOR.execute(task), initialDelay, period, timeUnit);
         TASK_MAP.put(taskId, future);
     }
