@@ -163,18 +163,20 @@ class BackupExecutePlainHandler extends AbstractCallbackHandler {
                         .chatId(chatId)
                         .document(new org.telegram.telegrambots.meta.api.objects.InputFile(backupFile))
                         .caption(
-                            "📦 *备份文件*\n\n" +
-                            "✅ 备份类型：普通备份（未加密）\n" +
-                            "📅 创建时间：" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "\n\n" +
-                            "💡 说明：\n" +
-                            "• 此备份文件未加密\n" +
-                            "• 请妥善保管，避免泄露\n" +
-                            "• 可用于系统数据恢复\n\n" +
-                            "⚠️ 重要：\n" +
-                            "文件已发送到聊天窗口，\n" +
-                            "服务器副本将在发送后删除。"
+                            com.tony.kingdetective.telegram.utils.MarkdownFormatter.formatMarkdown(
+                                "📦 *备份文件*\n\n" +
+                                "✅ 备份类型：普通备份（未加密）\n" +
+                                "📅 创建时间：" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "\n\n" +
+                                "💡 说明：\n" +
+                                "• 此备份文件未加密\n" +
+                                "• 请妥善保管，避免泄露\n" +
+                                "• 可用于系统数据恢复\n\n" +
+                                "⚠️ 重要：\n" +
+                                "文件已发送到聊天窗口，\n" +
+                                "服务器副本将在发送后删除。"
+                            )
                         )
-                        .parseMode("Markdown")
+                        .parseMode("MarkdownV2")
                         .build();
                 
                 try {

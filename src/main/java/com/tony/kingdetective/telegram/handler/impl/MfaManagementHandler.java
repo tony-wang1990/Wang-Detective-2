@@ -237,15 +237,17 @@ class MfaEnableHandler extends AbstractCallbackHandler {
                         .chatId(chatId)
                         .photo(new org.telegram.telegrambots.meta.api.objects.InputFile(qrFile))
                         .caption(
-                            "📱 *MFA 二维码*\n\n" +
-                            "请使用身份验证器应用（如 Google Authenticator、Microsoft Authenticator 等）\n" +
-                            "扫描此二维码来添加账户。\n\n" +
-                            "⚠️ 注意：\n" +
-                            "• 请妥善保管此二维码\n" +
-                            "• 扫描后即可删除此图片\n" +
-                            "• 如需重新生成，请先删除密钥"
+                            com.tony.kingdetective.telegram.utils.MarkdownFormatter.formatMarkdown(
+                                "📱 *MFA 二维码*\n\n" +
+                                "请使用身份验证器应用（如 Google Authenticator、Microsoft Authenticator 等）\n" +
+                                "扫描此二维码来添加账户。\n\n" +
+                                "⚠️ 注意：\n" +
+                                "• 请妥善保管此二维码\n" +
+                                "• 扫描后即可删除此图片\n" +
+                                "• 如需重新生成，请先删除密钥"
+                            )
                         )
-                        .parseMode("Markdown")
+                        .parseMode("MarkdownV2")
                         .build();
                 
                 try {

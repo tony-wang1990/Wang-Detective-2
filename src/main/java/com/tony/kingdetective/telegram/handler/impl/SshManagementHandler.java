@@ -217,8 +217,8 @@ class SshTestHandler extends AbstractCallbackHandler {
         try {
             telegramClient.execute(SendMessage.builder()
                 .chatId(chatId)
-                .text(text)
-                .parseMode("Markdown")
+                .text(com.tony.kingdetective.telegram.utils.MarkdownFormatter.formatMarkdown(text))
+                .parseMode("MarkdownV2")
                 .replyMarkup(new InlineKeyboardMarkup(keyboard))
                 .build());
         } catch (TelegramApiException e) {
