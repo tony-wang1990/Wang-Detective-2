@@ -36,6 +36,7 @@ import com.tony.kingdetective.utils.CommonUtils;
 import com.tony.kingdetective.utils.CustomExpiryGuavaCache;
 import lombok.extern.slf4j.Slf4j;
 
+import com.oracle.bmc.ClientConfiguration;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -70,6 +71,12 @@ public class OracleInstanceFetcher implements AutoCloseable {
     private final MonitoringClient monitoringClient;
     private final NetworkLoadBalancerClient networkLoadBalancerClient;
 
+    /** OCI SDK 统一超时配置：连接 10s，读取 15s，避免网络抖动导致请求无限挂起 */
+    private static final ClientConfiguration OCI_CLIENT_CFG = ClientConfiguration.builder()
+            .connectionTimeoutMillis(10_000)
+            .readTimeoutMillis(15_000)
+            .build();
+
     public OracleInstanceFetcher(SysUserDTO user) {
         this.user = user;
         this.compartmentId = user.getOciCfg().getTenantId();
@@ -97,16 +104,16 @@ public class OracleInstanceFetcher implements AutoCloseable {
                 .region(com.oracle.bmc.Region.valueOf(user.getOciCfg().getRegion()))
                 .build();
 
-        this.virtualNetworkClient = VirtualNetworkClient.builder().build(provider);
-        this.workRequestClient = WorkRequestClient.builder().build(provider);
-        this.identityClient = IdentityClient.builder().build(provider);
-        this.computeClient = ComputeClient.builder().build(provider);
-        this.computeManagementClient = ComputeManagementClient.builder().build(provider);
-        this.blockstorageClient = BlockstorageClient.builder().build(provider);
-        this.identityDomainsClient = IdentityDomainsClient.builder().build(provider);
-        this.computeInstanceAgentClient = ComputeInstanceAgentClient.builder().build(provider);
-        this.monitoringClient = MonitoringClient.builder().build(provider);
-        this.networkLoadBalancerClient = NetworkLoadBalancerClient.builder().build(provider);
+        this.virtualNetworkClient    = VirtualNetworkClient.builder().clientConfigurator(builder -> builder.property(com.oracle.bmc.http.client.StandardClientProperties.CONNECT_TIMEOUT, java.time.Duration.ofMillis(10_000)).property(com.oracle.bmc.http.client.StandardClientProperties.READ_TIMEOUT, java.time.Duration.ofMillis(15_000))).build(provider);
+        this.workRequestClient       = WorkRequestClient.builder().clientConfigurator(builder -> builder.property(com.oracle.bmc.http.client.StandardClientProperties.CONNECT_TIMEOUT, java.time.Duration.ofMillis(10_000)).property(com.oracle.bmc.http.client.StandardClientProperties.READ_TIMEOUT, java.time.Duration.ofMillis(15_000))).build(provider);
+        this.identityClient          = IdentityClient.builder().clientConfigurator(builder -> builder.property(com.oracle.bmc.http.client.StandardClientProperties.CONNECT_TIMEOUT, java.time.Duration.ofMillis(10_000)).property(com.oracle.bmc.http.client.StandardClientProperties.READ_TIMEOUT, java.time.Duration.ofMillis(15_000))).build(provider);
+        this.computeClient           = ComputeClient.builder().clientConfigurator(builder -> builder.property(com.oracle.bmc.http.client.StandardClientProperties.CONNECT_TIMEOUT, java.time.Duration.ofMillis(10_000)).property(com.oracle.bmc.http.client.StandardClientProperties.READ_TIMEOUT, java.time.Duration.ofMillis(15_000))).build(provider);
+        this.computeManagementClient = ComputeManagementClient.builder().clientConfigurator(builder -> builder.property(com.oracle.bmc.http.client.StandardClientProperties.CONNECT_TIMEOUT, java.time.Duration.ofMillis(10_000)).property(com.oracle.bmc.http.client.StandardClientProperties.READ_TIMEOUT, java.time.Duration.ofMillis(15_000))).build(provider);
+        this.blockstorageClient      = BlockstorageClient.builder().clientConfigurator(builder -> builder.property(com.oracle.bmc.http.client.StandardClientProperties.CONNECT_TIMEOUT, java.time.Duration.ofMillis(10_000)).property(com.oracle.bmc.http.client.StandardClientProperties.READ_TIMEOUT, java.time.Duration.ofMillis(15_000))).build(provider);
+        this.identityDomainsClient   = IdentityDomainsClient.builder().clientConfigurator(builder -> builder.property(com.oracle.bmc.http.client.StandardClientProperties.CONNECT_TIMEOUT, java.time.Duration.ofMillis(10_000)).property(com.oracle.bmc.http.client.StandardClientProperties.READ_TIMEOUT, java.time.Duration.ofMillis(15_000))).build(provider);
+        this.computeInstanceAgentClient = ComputeInstanceAgentClient.builder().clientConfigurator(builder -> builder.property(com.oracle.bmc.http.client.StandardClientProperties.CONNECT_TIMEOUT, java.time.Duration.ofMillis(10_000)).property(com.oracle.bmc.http.client.StandardClientProperties.READ_TIMEOUT, java.time.Duration.ofMillis(15_000))).build(provider);
+        this.monitoringClient        = MonitoringClient.builder().clientConfigurator(builder -> builder.property(com.oracle.bmc.http.client.StandardClientProperties.CONNECT_TIMEOUT, java.time.Duration.ofMillis(10_000)).property(com.oracle.bmc.http.client.StandardClientProperties.READ_TIMEOUT, java.time.Duration.ofMillis(15_000))).build(provider);
+        this.networkLoadBalancerClient = NetworkLoadBalancerClient.builder().clientConfigurator(builder -> builder.property(com.oracle.bmc.http.client.StandardClientProperties.CONNECT_TIMEOUT, java.time.Duration.ofMillis(10_000)).property(com.oracle.bmc.http.client.StandardClientProperties.READ_TIMEOUT, java.time.Duration.ofMillis(15_000))).build(provider);
     }
 
     @Override
