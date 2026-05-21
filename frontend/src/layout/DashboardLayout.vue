@@ -311,10 +311,7 @@ onBeforeUnmount(() => {
           <Moon v-else :size="16" />
           {{ theme === 'dark' ? '开灯' : '关灯' }}
         </button>
-        <a class="wd-legacy" href="/legacy-dashboard.html">
-          <ExternalLink :size="16" />
-          旧版入口
-        </a>
+
         <button type="button" class="wd-logout" @click="logout">
           <LogOut :size="16" />
           退出登录
