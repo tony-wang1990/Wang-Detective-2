@@ -13,6 +13,7 @@ import { apiGet, getHealth, type GlanceData, type HealthData } from '../api/http
 const glance = reactive<GlanceData>({});
 const health = ref<HealthData>({});
 const refreshedAt = ref('');
+const nowText = ref('');
 const mapRef = ref<HTMLElement | null>(null);
 const cpuChartRef = ref<HTMLElement | null>(null);
 const memoryChartRef = ref<HTMLElement | null>(null);
@@ -25,6 +26,7 @@ let cpuChart: EChartsType | null = null;
 let memoryChart: EChartsType | null = null;
 let trafficChart: EChartsType | null = null;
 let metricsWs: WebSocket | null = null;
+let clockTimer: number | undefined;
 
 echarts.use([PieChart, LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer]);
 
@@ -34,6 +36,18 @@ const stats = [
   { label: '区域数量', key: 'regions', icon: Globe2 },
   { label: '运行天数', key: 'days', icon: CalendarDays }
 ] as const;
+
+const liveUptimeText = computed(() => {
+  const seconds = Number(health.value.uptimeSeconds || 0);
+  if (!seconds) return '-';
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  if (days > 0) return `${days} 天 ${hours} 小时`;
+  if (hours > 0) return `${hours} 小时 ${minutes} 分钟`;
+  return `${minutes} 分 ${secs} 秒`;
+});
 
 type MetricPair = {
   used?: string | number;
@@ -201,6 +215,13 @@ function updateCharts(metrics: MetricsMessage) {
   });
 }
 
+function tickClock() {
+  nowText.value = new Date().toLocaleTimeString();
+  if (health.value.uptimeSeconds != null) {
+    health.value.uptimeSeconds += 1;
+  }
+}
+
 function resizeVisuals() {
   map?.invalidateSize();
   cpuChart?.resize();
@@ -262,6 +283,8 @@ async function refresh() {
 
 onMounted(async () => {
   await nextTick();
+  tickClock();
+  clockTimer = window.setInterval(tickClock, 1000);
   initMap();
   initCharts();
   await refresh();
@@ -270,6 +293,9 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  if (clockTimer) {
+    window.clearInterval(clockTimer);
+  }
   disconnectMetrics();
   window.removeEventListener('resize', resizeVisuals);
   cpuChart?.dispose();
@@ -310,7 +336,7 @@ onBeforeUnmount(() => {
       <article class="wd-card">
         <header>
           <h2>系统诊断</h2>
-          <span>{{ refreshedAt || '未刷新' }}</span>
+          <span>{{ nowText || refreshedAt || '未刷新' }}</span>
         </header>
         <div class="wd-health-list">
           <div>
@@ -332,6 +358,11 @@ onBeforeUnmount(() => {
             <Activity :size="18" />
             <b>运行版本</b>
             <em>{{ displayVersion }}</em>
+          </div>
+          <div>
+            <Activity :size="18" />
+            <b>运行时长</b>
+            <em>{{ liveUptimeText }}</em>
           </div>
         </div>
       </article>

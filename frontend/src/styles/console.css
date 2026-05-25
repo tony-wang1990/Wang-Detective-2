@@ -216,7 +216,7 @@ textarea:focus-visible {
   height: 72px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   padding: 0 22px;
   border-bottom: 1px solid var(--wd-line);
   background: color-mix(in srgb, var(--wd-surface) 92%, transparent);
@@ -280,7 +280,7 @@ textarea:focus-visible {
 .wd-top-status,
 .wd-network-indicator,
 .wd-version {
-  padding-left: 16px;
+  padding-left: 14px;
   border-left: 1px solid var(--wd-line);
   color: var(--wd-muted);
   font-weight: 700;
@@ -1736,7 +1736,7 @@ html.dark .wd-leaflet-map .leaflet-tile {
 .wd-login {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(380px, 44vw) minmax(0, 1fr);
+  grid-template-columns: minmax(520px, 52vw) minmax(460px, 1fr);
   background: var(--wd-bg);
 }
 
@@ -1744,9 +1744,10 @@ html.dark .wd-leaflet-map .leaflet-tile {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 72px;
+  padding: clamp(42px, 6vw, 86px);
   background:
-    radial-gradient(circle at 28% 18%, rgba(20, 184, 166, .32), transparent 34%),
+    radial-gradient(circle at 18% 20%, rgba(20, 184, 166, .36), transparent 34%),
+    radial-gradient(circle at 82% 76%, rgba(34, 211, 238, .16), transparent 28%),
     linear-gradient(180deg, #08313a, #111827);
   color: #fff;
 }
@@ -1793,6 +1794,68 @@ html.dark .wd-leaflet-map .leaflet-tile {
   font-weight: 800;
 }
 
+.wd-login-hero-copy {
+  max-width: 760px;
+  display: grid;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.wd-login-hero-copy strong {
+  color: #f8fafc;
+  font-size: clamp(24px, 3.4vw, 42px);
+  line-height: 1.18;
+}
+
+.wd-login-hero-copy p {
+  max-width: 620px;
+  margin: 0;
+  color: #b6f4ef;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.wd-login-feature-grid {
+  max-width: 760px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.wd-login-feature-grid article {
+  min-height: 152px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, .22);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, .42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+
+.wd-login-feature-grid span {
+  width: fit-content;
+  padding: 3px 8px;
+  border: 1px solid rgba(103, 232, 249, .24);
+  border-radius: 999px;
+  color: #67e8f9;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.wd-login-feature-grid strong {
+  color: #fff;
+  font-size: 18px;
+}
+
+.wd-login-feature-grid p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
 .wd-login-signal {
   width: min(420px, 100%);
   display: grid;
@@ -1826,8 +1889,11 @@ html.dark .wd-leaflet-map .leaflet-tile {
 .wd-login-panel {
   display: grid;
   place-items: center;
-  padding: 32px;
+  padding: clamp(28px, 4vw, 56px);
   position: relative;
+  background:
+    radial-gradient(circle at 50% 16%, color-mix(in srgb, var(--wd-accent) 12%, transparent), transparent 36%),
+    var(--wd-bg);
 }
 
 .wd-login-card {
@@ -2124,5 +2190,13 @@ html.dark .wd-leaflet-map .leaflet-tile {
 
   .wd-bubble {
     max-width: 100%;
+  }
+
+  .wd-login-brand {
+    min-height: auto;
+  }
+
+  .wd-login-feature-grid {
+    grid-template-columns: 1fr;
   }
 }

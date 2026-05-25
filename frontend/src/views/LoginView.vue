@@ -62,18 +62,30 @@ onMounted(loadMfaState);
         <div>
           <span>WANG DETECTIVE</span>
           <h1>W-探长</h1>
-          <p>OCI Operations Console</p>
+          <p>OCI Operations Command Center</p>
         </div>
       </div>
-      <div class="wd-login-signal">
-        <strong>OCI</strong>
-        <span>Compute · Network · Logs · Ops</span>
+      <div class="wd-login-hero-copy">
+        <strong>把 OCI 资源、任务、日志、SSH、备份和救援能力收进一个控制台。</strong>
+        <p>面向低配 VPS 和多区域 OCI 管理场景，强调真实操作、可审计、可回滚。</p>
       </div>
-      <ul>
-        <li>资源、任务、日志集中管理</li>
-        <li>系统诊断与运维入口统一呈现</li>
-        <li>深色 / 浅色主题自然切换</li>
-      </ul>
+      <div class="wd-login-feature-grid">
+        <article>
+          <span>Compute</span>
+          <strong>实例与任务</strong>
+          <p>开机任务、实例状态、电源动作、引导卷和网络入口集中管理。</p>
+        </article>
+        <article>
+          <span>Ops</span>
+          <strong>终端与日志</strong>
+          <p>Web SSH/SFTP、服务日志、操作审计和系统诊断统一查看。</p>
+        </article>
+        <article>
+          <span>Safety</span>
+          <strong>备份与救援</strong>
+          <p>本地备份、Object Storage 归档、恢复计划和救援中心联动。</p>
+        </article>
+      </div>
     </section>
 
     <section class="wd-login-panel">

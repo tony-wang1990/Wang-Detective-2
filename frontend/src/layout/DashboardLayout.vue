@@ -12,7 +12,6 @@ import {
   Menu,
   Moon,
   RefreshCw,
-  Search,
   ServerCog,
   ShieldAlert,
   ShieldCheck,
@@ -46,7 +45,6 @@ const updateConfirmOpen = ref(false);
 const toastMessage = ref('');
 const toastKind = ref<'success' | 'error' | 'info'>('info');
 const sidebarCollapsed = ref(false);
-const globalSearch = ref('');
 const networkActive = ref(false);
 const networkCount = ref(0);
 let healthTimer: number | undefined;
@@ -78,25 +76,6 @@ function isActive(item: { path: string; match?: string[] }) {
 function logout() {
   sessionStorage.clear();
   router.push('/login');
-}
-
-function runGlobalSearch() {
-  const text = globalSearch.value.trim().toLowerCase();
-  if (!text) {
-    return;
-  }
-  const target = navItems.find((item) => {
-    const label = item.label.toLowerCase();
-    return label.includes(text)
-      || item.path.toLowerCase().includes(text)
-      || (text.includes('ssh') && item.path.includes('ops-terminal'))
-      || (text.includes('log') && item.path.includes('ociLog'))
-      || (text.includes('oci') && item.path.includes('user'));
-  });
-  if (target) {
-    router.push(target.path);
-    globalSearch.value = '';
-  }
 }
 
 function notify(message: string, kind: 'success' | 'error' | 'info' = 'info') {
@@ -280,11 +259,6 @@ onBeforeUnmount(() => {
         >
           <Menu :size="20" />
         </button>
-        <label class="wd-search">
-          <Search :size="16" />
-          <input v-model="globalSearch" placeholder="搜索资源、任务、日志等..." @keyup.enter="runGlobalSearch" />
-          <kbd>Enter</kbd>
-        </label>
         <div class="wd-top-status">
           <span class="dot" :class="healthClass"></span>
           系统健康 <b :class="healthClass">{{ healthStatus }}</b>
