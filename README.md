@@ -57,7 +57,7 @@ docker compose up -d --force-recreate
 
 ## 最近完成
 
-- 新增 `scripts/remote-smoke-test.mjs` 线上验收脚本，可自动检查健康、登录、系统诊断、版本、首页概览、OCI 配置、任务、审计、备份、救援和风险接口。
+- 新增 `scripts/remote-smoke-test.sh` 和 `scripts/remote-smoke-test.mjs` 线上验收脚本，可自动检查健康、登录、系统诊断、版本、首页概览、OCI 配置、任务、审计、备份、救援和风险接口；服务器没有 Node 时直接使用 `.sh` 版本。
 - 前端 API 请求新增统一超时机制，源站或 Cloudflare 长时间无响应时会给出明确错误，不再让登录页和按钮无限卡住。
 - 登录页新增连接等待提示，引导优先检查容器健康、反向代理和 Cloudflare 源站连接。
 - 修复 Telegram Bot 源码乱码，恢复中文菜单、日志查询和运维中心文案。
@@ -120,6 +120,9 @@ bash scripts/support-bundle.sh
 WANG_DETECTIVE_BASE_URL=https://your-domain.example \
 WANG_DETECTIVE_USERNAME=admin \
 WANG_DETECTIVE_PASSWORD='your-password' \
+bash scripts/remote-smoke-test.sh
+
+# 本机有 Node 20+ 时也可使用 JS 版
 node scripts/remote-smoke-test.mjs
 ```
 

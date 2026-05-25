@@ -198,7 +198,8 @@ for script_name in \
     support-bundle.sh \
     maintenance.sh \
     setup-backup-cron.sh \
-    verify-release.sh
+    verify-release.sh \
+    remote-smoke-test.sh
 do
     download_script "$script_name"
 done

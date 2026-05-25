@@ -110,8 +110,8 @@ public class OciTask implements ApplicationRunner {
 
     private void startTgBog() {
         virtualExecutor.execute(() -> {
-            OciKv tgToken = kvService.getOne(new LambdaQueryWrapper<OciKv>().eq(OciKv::getCode, SysCfgEnum.SYS_TG_BOT_TOKEN.getCode()));
-            OciKv tgChatId = kvService.getOne(new LambdaQueryWrapper<OciKv>().eq(OciKv::getCode, SysCfgEnum.SYS_TG_CHAT_ID.getCode()));
+            OciKv tgToken = getSingleKv(kvService, SysCfgEnum.SYS_TG_BOT_TOKEN, null, null);
+            OciKv tgChatId = getSingleKv(kvService, SysCfgEnum.SYS_TG_CHAT_ID, null, null);
             String token = firstNonBlank(kvValue(tgToken), telegramBotToken);
             String chatId = firstNonBlank(kvValue(tgChatId), telegramChatId);
             if (StrUtil.isBlank(token) && StrUtil.isBlank(chatId)) {
@@ -136,7 +136,7 @@ public class OciTask implements ApplicationRunner {
         });
     }
 
-    private String kvValue(OciKv kv) {
+    private static String kvValue(OciKv kv) {
         return kv == null ? null : kv.getValue();
     }
 
@@ -147,6 +147,49 @@ public class OciTask implements ApplicationRunner {
             }
         }
         return "";
+    }
+
+    private static OciKv getSingleKv(IOciKvService kvService, SysCfgEnum cfgEnum, SysCfgTypeEnum typeEnum, String preferredValue) {
+        LambdaQueryWrapper<OciKv> wrapper = new LambdaQueryWrapper<OciKv>()
+                .eq(OciKv::getCode, cfgEnum.getCode());
+        if (typeEnum != null) {
+            wrapper.eq(OciKv::getType, typeEnum.getCode());
+        }
+        wrapper.orderByDesc(OciKv::getCreateTime)
+                .orderByDesc(OciKv::getId);
+
+        List<OciKv> records = kvService.list(wrapper);
+        if (CollectionUtil.isEmpty(records)) {
+            return null;
+        }
+
+        OciKv selected = records.get(0);
+        if (StrUtil.isNotBlank(preferredValue)) {
+            selected = records.stream()
+                    .filter(record -> preferredValue.equals(record.getValue()))
+                    .findFirst()
+                    .orElse(selected);
+        }
+
+        if (records.size() > 1) {
+            String selectedId = selected.getId();
+            List<String> duplicateIds = records.stream()
+                    .map(OciKv::getId)
+                    .filter(StrUtil::isNotBlank)
+                    .filter(id -> !Objects.equals(id, selectedId))
+                    .toList();
+            if (CollectionUtil.isNotEmpty(duplicateIds)) {
+                kvService.removeByIds(duplicateIds);
+                log.warn("Duplicate OciKv records cleaned, code={}, type={}, kept={}, removed={}",
+                        cfgEnum.getCode(), typeEnum == null ? "*" : typeEnum.getCode(), selectedId, duplicateIds.size());
+            }
+        }
+
+        return selected;
+    }
+
+    private static String getSingleKvValue(IOciKvService kvService, SysCfgEnum cfgEnum, SysCfgTypeEnum typeEnum, String preferredValue) {
+        return kvValue(getSingleKv(kvService, cfgEnum, typeEnum, preferredValue));
     }
 
     private void cleanLogTask() {
@@ -229,8 +272,7 @@ public class OciTask implements ApplicationRunner {
 
     private void initGenMfaPng() {
         virtualExecutor.execute(() -> {
-            Optional.ofNullable(kvService.getOne(new LambdaQueryWrapper<OciKv>()
-                    .eq(OciKv::getCode, SysCfgEnum.SYS_MFA_SECRET.getCode()))).ifPresent(mfa -> {
+            Optional.ofNullable(getSingleKv(kvService, SysCfgEnum.SYS_MFA_SECRET, null, null)).ifPresent(mfa -> {
                 String qrCodeURL = CommonUtils.generateQRCodeURL(mfa.getValue(), account, "king-detective");
                 CommonUtils.genQRPic(CommonUtils.MFA_QR_PNG_PATH, qrCodeURL);
             });
@@ -238,11 +280,9 @@ public class OciTask implements ApplicationRunner {
     }
 
     private void saveVersion() {
-        virtualExecutor.execute(() -> {
+        try {
             String currentVersion = CommonUtils.getCurrentVersion();
-            OciKv oldVersion = kvService.getOne(new LambdaQueryWrapper<OciKv>()
-                    .eq(OciKv::getCode, SysCfgEnum.SYS_INFO_VERSION.getCode())
-                    .eq(OciKv::getType, SysCfgTypeEnum.SYS_INFO.getCode()));
+            OciKv oldVersion = getSingleKv(kvService, SysCfgEnum.SYS_INFO_VERSION, SysCfgTypeEnum.SYS_INFO, currentVersion);
             if (null == oldVersion) {
                 kvService.save(OciKv.builder()
                         .id(IdUtil.getSnowflake().nextIdStr())
@@ -257,16 +297,15 @@ public class OciTask implements ApplicationRunner {
                 kvService.updateById(oldVersion);
                 log.info("版本信息已更新：{} -> {}", previousVersion, currentVersion);
             }
-        });
+        } catch (Exception e) {
+            log.error("Failed to save application version", e);
+        }
 
     }
 
     private void startInform() {
         String latestVersion = CommonUtils.getLatestVersion();
-        String nowVersion = kvService.getObj(new LambdaQueryWrapper<OciKv>()
-                .eq(OciKv::getCode, SysCfgEnum.SYS_INFO_VERSION.getCode())
-                .eq(OciKv::getType, SysCfgTypeEnum.SYS_INFO.getCode())
-                .select(OciKv::getValue), String::valueOf);
+        String nowVersion = getSingleKvValue(kvService, SysCfgEnum.SYS_INFO_VERSION, SysCfgTypeEnum.SYS_INFO, CommonUtils.getCurrentVersion());
         nowVersion = StrUtil.blankToDefault(nowVersion, CommonUtils.getCurrentVersion());
         latestVersion = StrUtil.blankToDefault(latestVersion, nowVersion);
         log.info(String.format("【king-detective】服务启动成功~ 当前版本：%s 最新版本：%s", nowVersion, latestVersion));
@@ -277,16 +316,12 @@ public class OciTask implements ApplicationRunner {
         String taskId = CacheConstant.PREFIX_PUSH_VERSION_UPDATE_MSG;
 
         addTask(taskId, () -> {
-            OciKv evun = kvService.getOne(new LambdaQueryWrapper<OciKv>()
-                    .eq(OciKv::getCode, SysCfgEnum.ENABLED_VERSION_UPDATE_NOTIFICATIONS.getCode()));
+            OciKv evun = getSingleKv(kvService, SysCfgEnum.ENABLED_VERSION_UPDATE_NOTIFICATIONS, null, null);
             if (null != evun && evun.getValue().equals(EnableEnum.OFF.getCode())) {
                 return;
             }
             String latest = CommonUtils.getLatestVersion();
-            String now = kvService.getObj(new LambdaQueryWrapper<OciKv>()
-                    .eq(OciKv::getCode, SysCfgEnum.SYS_INFO_VERSION.getCode())
-                    .eq(OciKv::getType, SysCfgTypeEnum.SYS_INFO.getCode())
-                    .select(OciKv::getValue), String::valueOf);
+            String now = getSingleKvValue(kvService, SysCfgEnum.SYS_INFO_VERSION, SysCfgTypeEnum.SYS_INFO, CommonUtils.getCurrentVersion());
             if (StrUtil.isBlank(latest)) {
                 return;
             }
@@ -300,8 +335,7 @@ public class OciTask implements ApplicationRunner {
         }, 0, 1, TimeUnit.DAYS);
 
         addTask(taskId + "_push", () -> {
-            OciKv evun = kvService.getOne(new LambdaQueryWrapper<OciKv>()
-                    .eq(OciKv::getCode, SysCfgEnum.ENABLED_VERSION_UPDATE_NOTIFICATIONS.getCode()));
+            OciKv evun = getSingleKv(kvService, SysCfgEnum.ENABLED_VERSION_UPDATE_NOTIFICATIONS, null, null);
             if (null != evun && evun.getValue().equals(EnableEnum.OFF.getCode())) {
                 return;
             }
@@ -310,10 +344,8 @@ public class OciTask implements ApplicationRunner {
     }
 
     private void dailyBroadcastTask() {
-        OciKv edb = kvService.getOne(new LambdaQueryWrapper<OciKv>()
-                .eq(OciKv::getCode, SysCfgEnum.ENABLE_DAILY_BROADCAST.getCode()));
-        OciKv dbc = kvService.getOne(new LambdaQueryWrapper<OciKv>()
-                .eq(OciKv::getCode, SysCfgEnum.DAILY_BROADCAST_CRON.getCode()));
+        OciKv edb = getSingleKv(kvService, SysCfgEnum.ENABLE_DAILY_BROADCAST, null, null);
+        OciKv dbc = getSingleKv(kvService, SysCfgEnum.DAILY_BROADCAST_CRON, null, null);
         if (null != edb && edb.getValue().equals(EnableEnum.OFF.getCode())) {
             return;
         }
