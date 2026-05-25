@@ -43,6 +43,7 @@ const confirmDialog = ref<ConfirmDialog | null>(null);
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)));
 const selectedCount = computed(() => selectedIds.value.length);
+const busy = computed(() => loading.value || stopping.value);
 
 const columns = [
   { key: 'username', label: '配置名称' },
@@ -195,8 +196,10 @@ onMounted(load);
         <p>集中查看和停止开机任务，支持关键字、架构筛选、分页、批量操作和任务详情预览。</p>
       </div>
       <div class="wd-actions">
-        <button type="button" @click="load"><RefreshCw :size="16" />刷新</button>
-        <button type="button" class="danger" :disabled="selectedCount === 0" @click="stopSelected">
+        <button type="button" :disabled="busy" @click="load">
+          <RefreshCw :size="16" :class="{ spinning: loading }" />{{ loading ? '刷新中' : '刷新' }}
+        </button>
+        <button type="button" class="danger" :disabled="selectedCount === 0 || busy" @click="stopSelected">
           <Square :size="16" />批量停止 {{ selectedCount || '' }}
         </button>
       </div>
@@ -209,9 +212,9 @@ onMounted(load);
           <label class="wd-inline-search">
             <Search :size="15" />
             <input v-model="keyword" placeholder="搜索配置名称、区域、架构..." @keyup.enter="resetPageAndLoad" />
-            <button type="button" @click="resetPageAndLoad">查询</button>
+            <button type="button" :disabled="busy" @click="resetPageAndLoad">{{ loading ? '查询中' : '查询' }}</button>
           </label>
-          <select v-model="architecture" @change="resetPageAndLoad">
+          <select v-model="architecture" :disabled="busy" @change="resetPageAndLoad">
             <option value="">全部架构</option>
             <option value="ARM">ARM</option>
             <option value="AMD">AMD</option>
@@ -229,6 +232,7 @@ onMounted(load);
               <input
                 type="checkbox"
                 :checked="rows.length > 0 && selectedCount === rows.length"
+                :disabled="busy"
                 @change="toggleAll(($event.target as HTMLInputElement).checked)"
               />
             </th>
@@ -250,7 +254,7 @@ onMounted(load);
             :key="String(row.id || index)"
             :class="{ selected: selectedIds.includes(rowId(row)) }"
           >
-            <td><input type="checkbox" :checked="selectedIds.includes(rowId(row))" @change="toggleRow(row)" /></td>
+            <td><input type="checkbox" :checked="selectedIds.includes(rowId(row))" :disabled="busy" @change="toggleRow(row)" /></td>
             <td v-for="column in columns" :key="column.key">
               <span v-if="column.key === 'architecture'" class="wd-badge" :class="architectureClass(row)">
                 {{ cell(row, column.key) }}
@@ -261,8 +265,8 @@ onMounted(load);
             <td><span class="wd-badge success">运行中</span></td>
             <td>
               <div class="wd-row-actions">
-                <button type="button" @click="selectedDetail = row"><ExternalLink :size="14" />详情</button>
-                <button type="button" class="danger-soft" @click="stopTask(row)"><Square :size="14" />停止</button>
+                <button type="button" :disabled="stopping" @click="selectedDetail = row"><ExternalLink :size="14" />详情</button>
+                <button type="button" class="danger-soft" :disabled="busy" @click="stopTask(row)"><Square :size="14" />停止</button>
               </div>
             </td>
           </tr>
@@ -271,20 +275,20 @@ onMounted(load);
 
       <footer class="wd-table-footer wd-pager">
         <span>共 {{ total }} 条 · 第 {{ currentPage }} / {{ totalPages }} 页</span>
-        <select v-model.number="pageSize" @change="resetPageAndLoad">
+        <select v-model.number="pageSize" :disabled="busy" @change="resetPageAndLoad">
           <option :value="10">10 条/页</option>
           <option :value="20">20 条/页</option>
           <option :value="50">50 条/页</option>
         </select>
-        <button type="button" :disabled="currentPage <= 1" @click="previousPage">上一页</button>
-        <button type="button" :disabled="currentPage >= totalPages" @click="nextPage">下一页</button>
+        <button type="button" :disabled="currentPage <= 1 || busy" @click="previousPage">上一页</button>
+        <button type="button" :disabled="currentPage >= totalPages || busy" @click="nextPage">下一页</button>
       </footer>
     </div>
 
     <div v-if="selectedDetail" class="wd-card wd-detail-card">
       <header>
         <h2><TimerReset :size="17" /> 任务详情</h2>
-        <button type="button" @click="selectedDetail = null">关闭</button>
+        <button type="button" :disabled="stopping" @click="selectedDetail = null">关闭</button>
       </header>
       <pre class="wd-terminal small">{{ JSON.stringify(selectedDetail, null, 2) }}</pre>
     </div>

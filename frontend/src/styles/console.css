@@ -2027,6 +2027,18 @@ html.dark .wd-leaflet-map .leaflet-tile {
   font-weight: 800;
 }
 
+.wd-login-hint {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--wd-accent) 28%, var(--wd-line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--wd-accent) 8%, var(--wd-surface));
+  color: var(--wd-muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
 .wd-login-panel footer {
   position: absolute;
   bottom: 28px;

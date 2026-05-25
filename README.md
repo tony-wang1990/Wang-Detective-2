@@ -57,6 +57,9 @@ docker compose up -d --force-recreate
 
 ## 最近完成
 
+- 新增 `scripts/remote-smoke-test.mjs` 线上验收脚本，可自动检查健康、登录、系统诊断、版本、首页概览、OCI 配置、任务、审计、备份、救援和风险接口。
+- 前端 API 请求新增统一超时机制，源站或 Cloudflare 长时间无响应时会给出明确错误，不再让登录页和按钮无限卡住。
+- 登录页新增连接等待提示，引导优先检查容器健康、反向代理和 Cloudflare 源站连接。
 - 修复 Telegram Bot 源码乱码，恢复中文菜单、日志查询和运维中心文案。
 - 审计并修复抢机剩余数量误判、换 IP 失败日志空指针、实例监控 OCI 初始化、TG 救援列表缺少私钥内容等逻辑问题。
 - 系统诊断改为优先读取环境变量和数据库配置，Telegram 已配置时不再误报未配置；SSH secret 和 AI key 不再作为必须告警项。
@@ -112,6 +115,12 @@ bash scripts/server-smoke-test.sh
 bash scripts/backup.sh
 bash scripts/restore.sh /app/king-detective/backups/wang-detective-backup-YYYYmmdd-HHMMSS.tar.gz
 bash scripts/support-bundle.sh
+
+# 远程线上验收（不要把真实密码写入仓库）
+WANG_DETECTIVE_BASE_URL=https://your-domain.example \
+WANG_DETECTIVE_USERNAME=admin \
+WANG_DETECTIVE_PASSWORD='your-password' \
+node scripts/remote-smoke-test.mjs
 ```
 
 ## 文档索引

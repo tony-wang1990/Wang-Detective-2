@@ -110,6 +110,7 @@ onMounted(loadMfaState);
             <span>MFA 验证码</span>
             <input v-model="form.mfaCode" inputmode="numeric" autocomplete="one-time-code" placeholder="6 位动态验证码" />
           </label>
+          <p v-if="loading" class="wd-login-hint">正在连接控制台服务，超过 20 秒无响应时请优先检查容器健康和反向代理源站。</p>
           <p v-if="error" class="wd-error">{{ error }}</p>
           <button type="submit" :disabled="loading">
             {{ loading ? '登录中...' : '登录控制台' }}

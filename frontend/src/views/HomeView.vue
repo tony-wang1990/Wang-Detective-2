@@ -19,6 +19,7 @@ const cpuChartRef = ref<HTMLElement | null>(null);
 const memoryChartRef = ref<HTMLElement | null>(null);
 const trafficChartRef = ref<HTMLElement | null>(null);
 const metricsStatus = ref('等待连接');
+const refreshing = ref(false);
 const displayVersion = computed(() => health.value.version || localStorage.getItem('currentVersion') || 'main');
 let map: any = null;
 let cityLayer: any = null;
@@ -265,20 +266,25 @@ function connectMetrics() {
 }
 
 async function refresh() {
-  const [glanceResult, healthResult] = await Promise.all([
-    apiGet<GlanceData>('/sys/glance').catch(() => null),
-    getHealth().catch(() => ({} as HealthData))
-  ]);
-  if (glanceResult?.success) {
-    Object.assign(glance, glanceResult.data || {});
-    if (glanceResult.data?.currentVersion) {
-      localStorage.setItem('currentVersion', glanceResult.data.currentVersion);
+  refreshing.value = true;
+  try {
+    const [glanceResult, healthResult] = await Promise.all([
+      apiGet<GlanceData>('/sys/glance').catch(() => null),
+      getHealth().catch(() => ({} as HealthData))
+    ]);
+    if (glanceResult?.success) {
+      Object.assign(glance, glanceResult.data || {});
+      if (glanceResult.data?.currentVersion) {
+        localStorage.setItem('currentVersion', glanceResult.data.currentVersion);
+      }
     }
+    health.value = healthResult;
+    refreshedAt.value = new Date().toLocaleTimeString();
+    renderMap();
+    updateCharts({});
+  } finally {
+    refreshing.value = false;
   }
-  health.value = healthResult;
-  refreshedAt.value = new Date().toLocaleTimeString();
-  renderMap();
-  updateCharts({});
 }
 
 onMounted(async () => {
@@ -325,7 +331,7 @@ onBeforeUnmount(() => {
       <article class="wd-card wd-map">
         <header>
           <h2>资源分布地图</h2>
-          <button type="button" @click="refresh">刷新</button>
+          <button type="button" :disabled="refreshing" @click="refresh">{{ refreshing ? '刷新中' : '刷新' }}</button>
         </header>
         <div class="wd-map-body">
           <div ref="mapRef" class="wd-leaflet-map"></div>
@@ -383,7 +389,9 @@ onBeforeUnmount(() => {
       <article class="wd-card">
         <header>
           <h2>网络流量</h2>
-          <button type="button" @click="connectMetrics">重连指标</button>
+          <button type="button" :disabled="metricsStatus === '连接中'" @click="connectMetrics">
+            {{ metricsStatus === '连接中' ? '连接中' : '重连指标' }}
+          </button>
         </header>
         <div ref="trafficChartRef" class="wd-chart wide"></div>
       </article>
