@@ -126,6 +126,7 @@ need_cmd curl
 need_cmd grep
 need_cmd sed
 need_cmd date
+need_cmd tar
 
 if [ ! -d "$APP_DIR" ]; then
     fail "应用目录不存在: $APP_DIR"
@@ -181,6 +182,13 @@ for script_name in $EXPECTED_SCRIPTS; do
         fi
         if grep -Iq . "$script_path" && LC_ALL=C grep -q $'\r' "$script_path"; then
             fail "运维脚本包含 CRLF 换行，bash 可能报错: $script_path"
+        fi
+        if command -v bash >/dev/null 2>&1; then
+            if bash -n "$script_path" >/dev/null 2>&1; then
+                pass "运维脚本语法通过: $script_path"
+            else
+                fail "运维脚本语法失败: $script_path"
+            fi
         fi
     else
         fail "运维脚本缺失: $script_path"
@@ -330,6 +338,7 @@ if [ -n "$TOKEN" ]; then
     check_api_success "OCI 风险看板" "$(api_get /api/v1/oci/risk?maxConfigs=1 "$TOKEN")"
     check_api_success "运维主机列表" "$(api_get /api/ops/ssh/hosts "$TOKEN")"
     check_api_success "最近操作审计" "$(api_get /api/ops/audit/recent?limit=5 "$TOKEN")"
+    check_api_success "最近服务日志" "$(api_get /api/v1/logs/recent?limit=20 "$TOKEN")"
     check_api_success "救援中心概览" "$(api_get /api/rescue/overview "$TOKEN")"
     check_api_success "本地备份列表" "$(api_get /api/v1/backups/local?limit=5 "$TOKEN")"
     check_api_success "定时备份方案" "$(api_get '/api/v1/backups/schedule-plan?cron=0%203%20*%20*%20*' "$TOKEN")"

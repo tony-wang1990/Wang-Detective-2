@@ -27,6 +27,22 @@ die() {
     exit 1
 }
 
+cleanup() {
+    rm -rf "$WORK_DIR"
+}
+
+trap cleanup EXIT
+
+compose() {
+    if docker compose version >/dev/null 2>&1; then
+        docker compose "$@"
+    elif command -v docker-compose >/dev/null 2>&1; then
+        docker-compose "$@"
+    else
+        return 127
+    fi
+}
+
 copy_if_exists() {
     src="$1"
     dst="$2"
@@ -76,10 +92,14 @@ fi
 } > "$WORK_DIR/meta/backup-info.txt"
 
 docker ps --filter "name=king-detective" > "$WORK_DIR/meta/docker-ps.txt" 2>&1 || true
-docker compose ps > "$WORK_DIR/meta/docker-compose-ps.txt" 2>&1 || true
+compose ps > "$WORK_DIR/meta/docker-compose-ps.txt" 2>&1 || true
 
 tar -czf "$BACKUP_FILE" -C "$WORK_DIR" payload meta
 chmod 600 "$BACKUP_FILE" 2>/dev/null || true
+
+tar -tzf "$BACKUP_FILE" >/dev/null || die "备份包校验失败，tar 无法读取: $BACKUP_FILE"
+tar -tzf "$BACKUP_FILE" | grep -q '^payload/' || die "备份包校验失败，缺少 payload 目录"
+tar -tzf "$BACKUP_FILE" | grep -q '^meta/backup-info.txt$' || die "备份包校验失败，缺少 meta/backup-info.txt"
 
 if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
@@ -96,8 +116,6 @@ if [ "$RETENTION_DAYS" != "0" ] && command -v find >/dev/null 2>&1; then
             ;;
     esac
 fi
-
-rm -rf "$WORK_DIR"
 
 log ""
 log "备份完成: $BACKUP_FILE"

@@ -19,12 +19,12 @@
 
 | 模块 | 当前完成度 | 100% 收口条件 | 验收方式 | 状态 |
 | --- | ---: | --- | --- | --- |
-| 部署与更新 | 91% | 全新安装、重复安装、更新、回滚、watcher、一键更新、低配 JVM 全部通过 | `install.sh`、`update.sh`、`rollback.sh`、`server-smoke-test.sh` | 进行中 |
+| 部署与更新 | 92% | 全新安装、重复安装、更新、回滚、watcher、一键更新、低配 JVM 全部通过 | `install.sh`、`update.sh`、`rollback.sh`、`server-smoke-test.sh` | 进行中 |
 | Vue 新前端 | 93% | 全路由桌面/手机/明暗主题无明显溢出，按钮和表格交互自然 | 浏览器真实验收 + `npm --prefix frontend run build` + 远程路由 smoke | 进行中 |
 | OCI 核心管理 | 85% | 配置、任务、实例、VCN、安全规则、引导卷、换 IP、开停机都有真实返回和错误提示 | 线上非破坏性验收 + 专用资源高危验收 | 进行中 |
 | Web SSH/SFTP | 89% | 主机库、连接测试、Web SSH、resize、重连、会话列表、SFTP 文件操作闭环 | Web 页面实测 + 操作审计检查 + 只读接口 smoke | 进行中 |
 | Telegram Bot | 86% | 运维中心、诊断、任务、日志、风险、备份、版本、实例向导全菜单可用 | Bot 菜单逐项点击 + 日志检查 | 进行中 |
-| 备份恢复 | 88% | 本地备份、恢复计划、定时备份、Bucket 为空、Object Storage 边界提示全部稳定 | Web + 脚本 + 测试备份包 + 只读接口 smoke | 进行中 |
+| 备份恢复 | 89% | 本地备份、恢复计划、定时备份、Bucket 为空、Object Storage 边界提示全部稳定 | Web + 脚本 + 测试备份包 + 只读接口 smoke | 进行中 |
 | 救援中心 | 72% | 当前定义为安全向导、脚本入口、风险提示 100%；高危自动救援继续保留实验区 | Web 页面 + 文档边界 + 只读接口 smoke + 专用机型测试 | 进行中 |
 | CI/测试 | 75% | 发布前能发现构建、脚本换行、脚本语法、API 映射、生产包资产、路由验收遗漏 | `verify-release.sh` + `acceptance-check.mjs` + `remote-smoke-test` | 进行中 |
 
@@ -78,12 +78,12 @@
 | `scripts/install.sh` | 全新安装、重复安装、同步脚本、保留 `.env`、健康等待 | 已验收一期 |
 | `scripts/update.sh` | 拉取镜像、重启、保留数据、失败提示 | 待复验 |
 | `scripts/rollback.sh` | 指定镜像回滚、失败保护、健康检查 | 待复验 |
-| `scripts/server-smoke-test.sh` | 容器、健康、日志、资源、域名提示 | 待复验 |
+| `scripts/server-smoke-test.sh` | 容器、健康、日志、脚本语法、最近日志接口、资源、域名提示 | 待复验 |
 | `scripts/remote-smoke-test.sh` | 无 Node 环境可跑，40 项页面和只读接口验收；路由名会安全转换为临时文件名 | 已验收一期 |
 | `scripts/remote-smoke-test.mjs` | Windows/Node 环境可跑，curl 回退，40 项页面和只读接口验收 | 已验收一期 |
-| `scripts/backup.sh` | 备份 data/keys/logs/config/scripts，生成校验信息 | 待复验 |
+| `scripts/backup.sh` | 备份 data/keys/logs/config/scripts，生成 sha256，并校验 tar/payload/meta | 待复验 |
 | `scripts/restore.sh` | 恢复前确认、备份包校验、失败保护 | 待专用环境验收 |
-| `scripts/support-bundle.sh` | 生成排障包并脱敏 | 待复验 |
+| `scripts/support-bundle.sh` | 生成排障包、脱敏配置和日志尾部，并校验 tar 可读 | 待复验 |
 | `scripts/verify-release.sh` | 发布前静态检查、前端构建、Maven 构建、验收检查 | 进行中 |
 
 ## 当前第一阶段执行清单

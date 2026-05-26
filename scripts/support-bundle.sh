@@ -19,6 +19,12 @@ die() {
     exit 1
 }
 
+cleanup() {
+    rm -rf "$WORK_DIR"
+}
+
+trap cleanup EXIT
+
 redact_file() {
     src="$1"
     dst="$2"
@@ -92,12 +98,20 @@ if [ -f runtime/watcher_heartbeat ]; then
 fi
 
 if [ -f logs/king-detective.log ]; then
-    tail -n 300 logs/king-detective.log > "$WORK_DIR/king-detective-file-log-tail.txt" 2>&1 || true
+    tail -n 300 logs/king-detective.log 2>&1 | redact_stream > "$WORK_DIR/king-detective-file-log-tail.txt" || true
+fi
+
+if [ -f logs/backup.log ]; then
+    tail -n 200 logs/backup.log 2>&1 | redact_stream > "$WORK_DIR/backup-log-tail.txt" || true
+fi
+
+if [ -f runtime/last_image_before_update ]; then
+    cp runtime/last_image_before_update "$WORK_DIR/last_image_before_update.txt"
 fi
 
 tar -czf "$BUNDLE_FILE" -C "$WORK_DIR" .
+tar -tzf "$BUNDLE_FILE" >/dev/null || die "支持包校验失败，tar 无法读取: $BUNDLE_FILE"
 chmod 600 "$BUNDLE_FILE" 2>/dev/null || true
-rm -rf "$WORK_DIR"
 
 log "支持包已生成: $BUNDLE_FILE"
 log "注意: 已尽量脱敏 .env/application.yml，但发送给他人前仍建议自行检查。"
