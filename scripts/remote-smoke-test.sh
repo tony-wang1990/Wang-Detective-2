@@ -105,6 +105,23 @@ request "legacy-map-redirect" "GET" "/ip-map.html" "" "/dashboard/home" || true
 request "legacy-features-redirect" "GET" "/wang-features.html" "" "/dashboard/features" || true
 request "legacy-terminal-redirect" "GET" "/ops-terminal.html" "" "/dashboard/ops-terminal" || true
 
+for route in \
+  "/login" \
+  "/dashboard/home" \
+  "/dashboard/user" \
+  "/dashboard/createTask" \
+  "/dashboard/risk" \
+  "/dashboard/backups" \
+  "/dashboard/rescue" \
+  "/dashboard/features" \
+  "/dashboard/ops-terminal" \
+  "/dashboard/ai-chat" \
+  "/dashboard/ociLog" \
+  "/dashboard/ops-audit" \
+  "/dashboard/sysCfg"; do
+  request "web-route:$route" "GET" "$route" "" '<div id="app"' || true
+done
+
 LOGIN_BODY="{\"account\":\"$(json_escape "$USERNAME")\",\"password\":\"$(json_escape "$PASSWORD")\"}"
 if request "login" "POST" "/api/sys/login" "$LOGIN_BODY" '"token"[[:space:]]*:'; then
   TOKEN="$(extract_token "$TMP_DIR/login.json")"

@@ -33,6 +33,21 @@ if (!baseUrl || !username || !password) {
 
 let token = '';
 const results = [];
+const WEB_ROUTES = [
+  '/login',
+  '/dashboard/home',
+  '/dashboard/user',
+  '/dashboard/createTask',
+  '/dashboard/risk',
+  '/dashboard/backups',
+  '/dashboard/rescue',
+  '/dashboard/features',
+  '/dashboard/ops-terminal',
+  '/dashboard/ai-chat',
+  '/dashboard/ociLog',
+  '/dashboard/ops-audit',
+  '/dashboard/sysCfg'
+];
 
 function normalizeBase(value) {
   return value.replace(/\/+$/, '');
@@ -204,6 +219,11 @@ async function main() {
   await check('legacy-terminal-redirect', 'GET', '/ops-terminal.html', undefined, (payload) => {
     return typeof payload === 'string' && payload.includes('/dashboard/ops-terminal');
   });
+  for (const route of WEB_ROUTES) {
+    await check(`web-route:${route}`, 'GET', route, undefined, (payload) => {
+      return typeof payload === 'string' && payload.includes('<div id="app"');
+    });
+  }
 
   const login = await check('login', 'POST', '/api/sys/login', {
     account: username,
