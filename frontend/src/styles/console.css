@@ -1509,6 +1509,46 @@ html.dark .wd-leaflet-map .leaflet-tile {
   font-weight: 900;
 }
 
+.wd-command-risk {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin: 0 14px 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--wd-warn) 48%, var(--wd-line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--wd-warn) 10%, var(--wd-surface));
+}
+
+.wd-command-risk.high {
+  border-color: color-mix(in srgb, var(--wd-danger) 48%, var(--wd-line));
+  background: color-mix(in srgb, var(--wd-danger) 9%, var(--wd-surface));
+}
+
+.wd-command-risk div {
+  display: grid;
+  gap: 4px;
+}
+
+.wd-command-risk strong {
+  color: var(--wd-text);
+  font-size: 13px;
+}
+
+.wd-command-risk span {
+  color: var(--wd-muted);
+  line-height: 1.55;
+}
+
+.wd-command-risk input {
+  min-height: 36px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--wd-surface);
+  color: var(--wd-text);
+}
+
 .wd-command-row.terminal-input-row {
   grid-template-columns: minmax(0, 1fr) auto auto auto;
 }

@@ -53,6 +53,12 @@ type CommandTemplate = {
   riskLevel?: string;
 };
 
+type CommandRisk = {
+  level: 'LOW' | 'MEDIUM' | 'HIGH';
+  label: string;
+  reason: string;
+};
+
 const SFTP_TRANSFER_LIMIT_BYTES = 50 * 1024 * 1024;
 const SFTP_TEXT_PREVIEW_LIMIT_BYTES = 1024 * 1024;
 const hosts = ref<Host[]>([]);
@@ -73,6 +79,7 @@ const commandHistory = ref<string[]>([]);
 const commandTemplates = ref<CommandTemplate[]>([]);
 const templateName = ref('');
 const templateCategory = ref('常用');
+const dangerConfirm = ref('');
 const sftpPath = ref('.');
 const sftpEntries = ref<SftpEntry[]>([]);
 const selectedSftpPath = ref('');
@@ -109,6 +116,7 @@ let resizeTimer: number | undefined;
 const currentHost = computed(() => hosts.value.find((host) => host.id === selectedHostId.value));
 const hostGroups = computed(() => Array.from(new Set(hosts.value.map((item) => item.hostGroup || '默认分组'))));
 const terminalConnected = ref(false);
+const commandRisk = computed(() => detectCommandRisk(command.value));
 const selectedSftpEntry = computed(() => {
   const path = selectedSftpPath.value || editorPath.value;
   return sftpEntries.value.find((item) => (item.path || item.name) === path);
@@ -257,6 +265,41 @@ function rememberCommand(value: string) {
 
 function applyCommand(value: string) {
   command.value = value;
+  dangerConfirm.value = '';
+}
+
+function detectCommandRisk(value: string): CommandRisk {
+  const text = value.trim().toLowerCase();
+  if (!text) {
+    return { level: 'LOW', label: '普通命令', reason: '' };
+  }
+  const highRiskPatterns = [
+    /\brm\s+(-[a-z]*r[a-z]*f|-rf|-fr)\b/,
+    /\bmkfs(\.|)\w*\b/,
+    /\bdd\s+.*\bof=\/dev\//,
+    /\bshutdown\b|\breboot\b|\bpoweroff\b|\bhalt\b/,
+    /\bdocker\s+(rm|rmi|system\s+prune)\b/,
+    /\bdocker\s+compose\s+down\b/,
+    /\biptables\s+-f\b|\bufw\s+reset\b/,
+    /\bchmod\s+-r\s+777\b|\bchown\s+-r\b/,
+    /\btruncate\s+-s\s+0\b/,
+    /:\s*\(\)\s*\{\s*:\s*\|\s*:\s*;\s*\}/
+  ];
+  if (highRiskPatterns.some((pattern) => pattern.test(text))) {
+    return { level: 'HIGH', label: '高危命令', reason: '可能删除数据、重启系统、清理容器或破坏网络，需要二次确认。' };
+  }
+  const mediumRiskPatterns = [
+    /\bsystemctl\s+(restart|stop)\b/,
+    /\bservice\s+\S+\s+(restart|stop)\b/,
+    /\bkill(all)?\b|\bpkill\b/,
+    /\bdocker\s+(stop|restart)\b/,
+    /\bapt(-get)?\s+(upgrade|dist-upgrade|remove|purge)\b/,
+    /\byum\s+(update|remove)\b/
+  ];
+  if (mediumRiskPatterns.some((pattern) => pattern.test(text))) {
+    return { level: 'MEDIUM', label: '中风险命令', reason: '可能影响服务状态或软件包，请确认目标主机后执行。' };
+  }
+  return { level: 'LOW', label: '普通命令', reason: '' };
 }
 
 async function loadCommandTemplates() {
@@ -280,7 +323,7 @@ async function saveCommandTemplate() {
       name,
       command: command.value,
       category: templateCategory.value || '常用',
-      riskLevel: command.value.includes('rm ') || command.value.includes('docker rm') ? 'HIGH' : 'LOW'
+      riskLevel: commandRisk.value.level
     });
     templateName.value = '';
     await loadCommandTemplates();
@@ -331,6 +374,14 @@ async function testConnection() {
 }
 
 async function execCommand() {
+  if (!command.value.trim()) {
+    status.value = '请先输入命令';
+    return;
+  }
+  if (commandRisk.value.level === 'HIGH' && dangerConfirm.value.trim() !== 'EXECUTE') {
+    status.value = '高危命令需要先输入 EXECUTE 后再执行';
+    return;
+  }
   status.value = '命令执行中';
   try {
     const res = await opsPost<CommandResult>('/ssh/exec', {
@@ -339,6 +390,7 @@ async function execCommand() {
       timeoutSeconds: 60
     });
     rememberCommand(command.value);
+    dangerConfirm.value = '';
     const data = res.data || {};
     output.value = [
       `host: ${data.name || data.host || '-'}`,
@@ -796,6 +848,17 @@ onBeforeUnmount(() => {
           <div class="wd-command-row">
             <input v-model="command" placeholder="输入命令" @keyup.enter="execCommand" />
             <button type="button" @click="execCommand"><Play :size="16" />执行</button>
+          </div>
+          <div v-if="commandRisk.level !== 'LOW'" class="wd-command-risk" :class="{ high: commandRisk.level === 'HIGH' }">
+            <div>
+              <strong>{{ commandRisk.label }}</strong>
+              <span>{{ commandRisk.reason }}</span>
+            </div>
+            <input
+              v-if="commandRisk.level === 'HIGH'"
+              v-model="dangerConfirm"
+              placeholder="输入 EXECUTE 后允许执行高危命令"
+            />
           </div>
           <pre class="wd-terminal">{{ output }}</pre>
         </div>
