@@ -210,6 +210,23 @@ export async function opsPost<T>(url: string, body: unknown): Promise<ApiEnvelop
   }
 }
 
+export async function opsPut<T>(url: string, body: unknown): Promise<ApiEnvelope<T>> {
+  const done = beginNetwork(`/api/ops${url}`);
+  try {
+    const response = await fetchWithTimeout(`/api/ops${url}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify(body)
+    });
+    return await parseResponse<ApiEnvelope<T>>(response, url);
+  } finally {
+    done();
+  }
+}
+
 export async function opsDelete<T>(url: string): Promise<ApiEnvelope<T>> {
   const done = beginNetwork(`/api/ops${url}`);
   try {

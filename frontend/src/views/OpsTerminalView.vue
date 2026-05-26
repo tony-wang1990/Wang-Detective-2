@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { Download, FilePenLine, FolderPlus, FolderOpen, ListChecks, Play, RefreshCw, Save, Server, Square, Terminal, Trash2, Upload, Wifi, Zap } from 'lucide-vue-next';
-import { opsDelete, opsDownloadWithProgress, opsGet, opsPost, opsUploadWithProgress, type TransferProgress } from '../api/http';
+import { Copy, Download, FilePenLine, FolderPlus, FolderOpen, ListChecks, Play, RefreshCw, Save, Server, Square, Terminal, Trash2, Upload, Wifi, Zap } from 'lucide-vue-next';
+import { opsDelete, opsDownloadWithProgress, opsGet, opsPost, opsPut, opsUploadWithProgress, type TransferProgress } from '../api/http';
 
 type Host = {
   id?: string;
@@ -355,9 +355,73 @@ async function saveHost() {
   status.value = '保存中';
   try {
     const payload = { ...form, port: Number(form.port || 22) };
-    await opsPost('/ssh/hosts', payload);
+    const updating = Boolean(selectedHostId.value);
+    const result = updating
+      ? await opsPut<Host>(`/ssh/hosts/${selectedHostId.value}`, payload)
+      : await opsPost<Host>('/ssh/hosts', payload);
     await loadHosts();
-    status.value = '主机已保存';
+    if (result.data?.id) {
+      selectedHostId.value = result.data.id;
+      fillHost(result.data);
+    }
+    status.value = updating ? '主机已更新' : '主机已保存';
+  } catch (error) {
+    status.value = errorMessage(error);
+  }
+}
+
+function newHostForm() {
+  selectedHostId.value = '';
+  form.name = '';
+  form.tags = '';
+  form.hostGroup = '默认分组';
+  form.host = '';
+  form.port = 22;
+  form.username = 'root';
+  form.authType = 'password';
+  form.password = '';
+  form.privateKey = '';
+  form.passphrase = '';
+  status.value = '已切换为新主机';
+}
+
+function duplicateSelectedHost() {
+  const host = currentHost.value;
+  if (!host) {
+    status.value = '请先选择要复制的主机';
+    return;
+  }
+  selectedHostId.value = '';
+  form.name = `${host.name || host.host || 'host'} copy`;
+  form.tags = host.tags || '';
+  form.hostGroup = host.hostGroup || '默认分组';
+  form.host = host.host || '';
+  form.port = Number(host.port || 22);
+  form.username = host.username || 'root';
+  form.authType = host.authType || 'password';
+  form.password = '';
+  form.privateKey = '';
+  form.passphrase = '';
+  status.value = '已复制主机基本信息，请补充密码或私钥后保存';
+}
+
+async function deleteSelectedHost() {
+  const host = currentHost.value;
+  if (!selectedHostId.value || !host) {
+    status.value = '请先选择要删除的主机';
+    return;
+  }
+  const label = host.name || host.host || selectedHostId.value;
+  if (!window.confirm(`确认删除 SSH 主机：${label}？`)) {
+    status.value = '已取消删除';
+    return;
+  }
+  status.value = '删除主机中';
+  try {
+    await opsDelete(`/ssh/hosts/${selectedHostId.value}`);
+    newHostForm();
+    await loadHosts();
+    status.value = '主机已删除';
   } catch (error) {
     status.value = errorMessage(error);
   }
@@ -819,8 +883,11 @@ onBeforeUnmount(() => {
           <label v-if="form.authType === 'password'"><span>密码</span><input v-model="form.password" type="password" /></label>
           <label v-else><span>私钥</span><textarea v-model="form.privateKey" /></label>
           <div class="wd-actions compact">
+            <button type="button" class="ghost" @click="newHostForm"><FolderPlus :size="16" />新建</button>
+            <button type="button" class="ghost" :disabled="!selectedHostId" @click="duplicateSelectedHost"><Copy :size="16" />复制</button>
             <button type="button" @click="saveHost"><Save :size="16" />保存</button>
             <button type="button" @click="createSession"><Terminal :size="16" />Web SSH</button>
+            <button type="button" class="danger-soft" :disabled="!selectedHostId" @click="deleteSelectedHost"><Trash2 :size="16" />删除</button>
           </div>
         </div>
       </aside>

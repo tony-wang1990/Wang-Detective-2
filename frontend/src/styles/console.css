@@ -617,6 +617,12 @@ html.dark .wd-leaflet-map .leaflet-tile {
   background: var(--wd-danger);
 }
 
+.wd-actions button.danger-soft {
+  border-color: color-mix(in srgb, var(--wd-danger) 34%, var(--wd-line));
+  background: color-mix(in srgb, var(--wd-danger) 10%, var(--wd-surface));
+  color: var(--wd-danger);
+}
+
 .wd-actions button.ghost,
 .wd-command-row button.ghost,
 .wd-form-grid button.ghost,
