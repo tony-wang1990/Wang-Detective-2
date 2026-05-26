@@ -1,399 +1,51 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>W-探长 新版功能</title>
-  <script>
-    (function () {
-      const params = new URLSearchParams(window.location.search);
-      const theme = params.get('theme') || localStorage.getItem('theme') || 'light';
-      if (params.get('embedded') === '1') {
-        document.documentElement.classList.add('embedded');
-      }
-      if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
-      }
-      localStorage.setItem('theme', theme);
-      window.addEventListener('message', function (event) {
-        if (event.origin !== window.location.origin || !event.data || event.data.type !== 'wang-theme') {
-          return;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="1;url=/dashboard/features">
+    <title>功能中心已迁移 - W-探长</title>
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            background: #0f172a;
+            color: #e5eefb;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
-        const nextTheme = event.data.theme === 'dark' ? 'dark' : 'light';
-        document.documentElement.classList.toggle('dark', nextTheme === 'dark');
-        localStorage.setItem('theme', nextTheme);
-      });
-    })();
-  </script>
-  <style>
-    :root {
-      --bg: #f6f8fb;
-      --panel: #ffffff;
-      --line: #d9e2ef;
-      --text: #172033;
-      --muted: #637083;
-      --brand: #2563eb;
-      --brand-2: #0f766e;
-      --warn: #b45309;
-      --danger: #b91c1c;
-      --ok: #15803d;
-    }
 
-    * {
-      box-sizing: border-box;
-    }
+        main {
+            width: min(520px, calc(100vw - 32px));
+            padding: 32px;
+            border: 1px solid rgba(142, 164, 191, 0.25);
+            border-radius: 14px;
+            background: #111c2f;
+        }
 
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
-      font-size: 14px;
-    }
+        h1 {
+            margin: 0 0 12px;
+            font-size: 24px;
+        }
 
-    header {
-      min-height: 58px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 12px 24px;
-      background: #14213d;
-      color: #fff;
-    }
+        p {
+            margin: 0 0 22px;
+            color: #8ea4bf;
+            line-height: 1.7;
+        }
 
-    h1 {
-      margin: 0;
-      font-size: 18px;
-      letter-spacing: 0;
-    }
-
-    header nav {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    a.button, button {
-      min-height: 36px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      padding: 0 13px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      background: #fff;
-      color: var(--text);
-      text-decoration: none;
-      cursor: pointer;
-      font: inherit;
-    }
-
-    header a.button {
-      border-color: rgba(255,255,255,.25);
-      background: rgba(255,255,255,.1);
-      color: #fff;
-    }
-
-    button.primary, a.primary {
-      background: var(--brand);
-      color: #fff;
-      border-color: var(--brand);
-    }
-
-    main {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 22px;
-    }
-
-    .summary {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 18px;
-    }
-
-    .metric, .panel, .feature {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, .06);
-    }
-
-    .metric {
-      padding: 16px;
-    }
-
-    .metric strong {
-      display: block;
-      margin-top: 8px;
-      font-size: 22px;
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1.1fr .9fr;
-      gap: 16px;
-    }
-
-    .panel {
-      padding: 18px;
-    }
-
-    h2 {
-      margin: 0 0 12px;
-      font-size: 16px;
-    }
-
-    .features {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .feature {
-      padding: 14px;
-    }
-
-    .feature h3 {
-      margin: 0 0 8px;
-      font-size: 15px;
-    }
-
-    .feature p {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.65;
-    }
-
-    .checks {
-      display: grid;
-      gap: 8px;
-    }
-
-    .check {
-      display: grid;
-      grid-template-columns: 74px minmax(0, 1fr);
-      gap: 10px;
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: #fbfcff;
-    }
-
-    .badge {
-      align-self: start;
-      border-radius: 999px;
-      padding: 3px 9px;
-      text-align: center;
-      font-weight: 700;
-      font-size: 12px;
-      color: #fff;
-    }
-
-    .OK { background: var(--ok); }
-    .WARN { background: var(--warn); }
-    .ERROR { background: var(--danger); }
-    .INFO { background: var(--brand-2); }
-
-    pre {
-      margin: 0;
-      padding: 12px;
-      overflow: auto;
-      background: #101827;
-      color: #d5e7ff;
-      border-radius: 6px;
-      line-height: 1.55;
-      max-height: 360px;
-    }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-
-    @media (max-width: 900px) {
-      .summary, .grid, .features {
-        grid-template-columns: 1fr;
-      }
-
-      header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-    }
-
-    html.embedded header {
-      display: none;
-    }
-
-    html.embedded main {
-      max-width: none;
-      padding: 16px;
-    }
-  </style>
-  <link rel="stylesheet" href="/wang-modern-theme.css?v=20260513-themefix">
+        a {
+            color: #23d6d6;
+            font-weight: 700;
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <h1>W-探长 新版功能中心</h1>
-    <nav>
-      <a class="button" href="/dashboard/home">返回主面板</a>
-      <a class="button primary" href="/ops-terminal.html">打开运维终端</a>
-      <a class="button" href="/actuator/health">健康检查</a>
-    </nav>
-  </header>
-
-  <main>
-    <section class="summary">
-      <div class="metric">
-        <span class="muted">当前健康状态</span>
-        <strong id="healthStatus">检测中</strong>
-      </div>
-      <div class="metric">
-        <span class="muted">系统诊断</span>
-        <strong id="diagnosticsStatus">检测中</strong>
-      </div>
-      <div class="metric">
-        <span class="muted">新版入口</span>
-        <strong>已接入</strong>
-      </div>
-      <div class="metric">
-        <span class="muted">运维模块</span>
-        <strong>SSH/SFTP</strong>
-      </div>
-    </section>
-
-    <section class="grid">
-      <div class="panel">
-        <h2>这版已经落地的功能</h2>
-        <div class="features">
-          <article class="feature">
-            <h3>部署稳定性</h3>
-            <p>修复 Docker 挂载覆盖 JAR、默认镜像、低配 VPS JVM 参数、IPv4 监听、健康检查启动宽限和 watcher 默认启动问题。</p>
-          </article>
-          <article class="feature">
-            <h3>系统诊断</h3>
-            <p>提供数据库、数据目录、密钥目录、日志、默认密码、Telegram 配置、磁盘和内存检查。</p>
-          </article>
-          <article class="feature">
-            <h3>运维终端</h3>
-            <p>新增 Web SSH、SSH 单命令、批量命令、SFTP 浏览、上传、下载、写入、重命名和删除。</p>
-          </article>
-          <article class="feature">
-            <h3>主机资产库和审计</h3>
-            <p>可保存 SSH 主机，密码和私钥 AES-GCM 加密存储，同时记录 SSH/SFTP 操作审计日志。</p>
-          </article>
-        </div>
-        <div class="actions">
-          <a class="button primary" href="/ops-terminal.html">进入 SSH/SFTP 运维终端</a>
-          <button id="reloadDiagnostics">刷新诊断</button>
-        </div>
-      </div>
-
-      <div class="panel" id="diagnostics">
-        <h2>系统诊断结果</h2>
-        <div id="checks" class="checks">
-          <div class="check">
-            <span class="badge INFO">INFO</span>
-            <span>正在读取诊断接口...</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="panel" style="margin-top:16px">
-      <h2>接口原始返回</h2>
-      <pre id="rawOutput">{}</pre>
-    </section>
-  </main>
-
-  <script>
-    const token = sessionStorage.getItem('token');
-
-    function fmtBytes(bytes) {
-      if (!bytes && bytes !== 0) return '-';
-      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-      let size = Number(bytes);
-      let index = 0;
-      while (size >= 1024 && index < units.length - 1) {
-        size = size / 1024;
-        index += 1;
-      }
-      return `${size.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
-    }
-
-    function renderChecks(items) {
-      const root = document.getElementById('checks');
-      if (!items || !items.length) {
-        root.innerHTML = '<div class="check"><span class="badge INFO">INFO</span><span>暂无诊断项</span></div>';
-        return;
-      }
-      root.innerHTML = items.map(item => `
-        <div class="check">
-          <span class="badge ${item.status || 'INFO'}">${item.status || 'INFO'}</span>
-          <span><strong>${item.name || '-'}</strong><br><span class="muted">${item.message || ''}</span></span>
-        </div>
-      `).join('');
-    }
-
-    async function loadHealth() {
-      try {
-        const rsp = await fetch('/actuator/health');
-        const data = await rsp.json();
-        document.getElementById('healthStatus').textContent = data.status || 'UNKNOWN';
-      } catch (error) {
-        document.getElementById('healthStatus').textContent = 'ERROR';
-      }
-    }
-
-    async function loadDiagnostics() {
-      const raw = document.getElementById('rawOutput');
-      if (!token) {
-        document.getElementById('diagnosticsStatus').textContent = '未登录';
-        renderChecks([{ status: 'WARN', name: 'login-token', message: '请先登录主面板，再打开新版功能中心。' }]);
-        raw.textContent = 'No session token found.';
-        return;
-      }
-
-      try {
-        const rsp = await fetch('/api/v1/system/diagnostics', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await rsp.json();
-        const data = json.data || json;
-        document.getElementById('diagnosticsStatus').textContent = data.status || (json.success ? 'OK' : 'UNKNOWN');
-        renderChecks(data.checks || []);
-        raw.textContent = JSON.stringify({
-          success: json.success,
-          msg: json.msg,
-          status: data.status,
-          version: data.version,
-          javaVersion: data.javaVersion,
-          uptimeSeconds: data.uptimeSeconds,
-          usedMemory: fmtBytes(data.usedMemoryBytes),
-          maxMemory: fmtBytes(data.maxMemoryBytes),
-          freeDisk: fmtBytes(data.freeDiskBytes),
-          checks: data.checks
-        }, null, 2);
-      } catch (error) {
-        document.getElementById('diagnosticsStatus').textContent = 'ERROR';
-        renderChecks([{ status: 'ERROR', name: 'diagnostics-api', message: error.message }]);
-        raw.textContent = error.stack || error.message;
-      }
-    }
-
-    document.getElementById('reloadDiagnostics').addEventListener('click', loadDiagnostics);
-    loadHealth();
-    loadDiagnostics();
-  </script>
+<main>
+    <h1>功能中心已迁移</h1>
+    <p>旧版独立功能页已迁移到 Vue 原生路由，系统会自动跳转到新版控制台。</p>
+    <a href="/dashboard/features">立即进入功能中心</a>
+</main>
 </body>
 </html>

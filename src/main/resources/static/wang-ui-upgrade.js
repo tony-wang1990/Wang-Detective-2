@@ -19,6 +19,7 @@
     '系统配置': 'system',
     'AI聊天室': 'ai',
     '新版功能': 'features',
+    '功能中心': 'features',
     '运维终端': 'terminal'
   };
 
@@ -271,7 +272,7 @@
       '<span id="wangDiagTime">刷新中</span>',
       '</div>',
       '<div id="wangDiagRows" class="wang-diag-rows"></div>',
-      '<a href="/wang-features.html?embedded=1" class="wang-diag-link">查看完整诊断报告 ›</a>'
+      '<a href="/dashboard/features" class="wang-diag-link">查看完整诊断报告 ›</a>'
     ].join('');
 
     map.parentNode.insertBefore(grid, map);

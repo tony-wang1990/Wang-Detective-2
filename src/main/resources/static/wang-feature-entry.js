@@ -7,16 +7,16 @@
   const entries = [
     {
       id: 'wang-feature-center-entry',
-      label: '新版功能',
+      label: '功能中心',
       icon: icons.features,
-      href: '/wang-features.html',
-      title: '新版功能'
+      href: '/dashboard/features',
+      title: '功能中心'
     },
     {
       id: 'wang-ops-terminal-entry',
       label: '运维终端',
       icon: icons.terminal,
-      href: '/ops-terminal.html',
+      href: '/dashboard/ops-terminal',
       title: '运维终端'
     }
   ];
@@ -46,7 +46,7 @@
     ].join('');
     item.addEventListener('click', function (event) {
       event.preventDefault();
-      renderEmbeddedPage(entry);
+      window.location.href = entry.href;
     });
     return item;
   }

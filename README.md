@@ -68,6 +68,7 @@ docker compose up -d --force-recreate
 - JS 版远程验收脚本支持 `--transport auto|fetch|curl`，当 Node fetch 直连 Cloudflare 超时时会自动回退到 curl。
 - Telegram `/terminal` 命令改为真实运维入口菜单，可直接进入 SSH 管理、主机概览、最近日志、错误日志、系统诊断和任务状态。
 - 旧版静态地图 `/ip-map.html` 已停止展示模拟实例点位，统一跳转到新版 Vue 首页，避免误判为假数据。
+- 旧版独立 `/wang-features.html` 和 `/ops-terminal.html` 已改为迁移提示并自动跳转 Vue 原生路由，侧边栏旧入口也统一改为“功能中心”。
 - README 新增新版首页和风险看板截图，便于部署前快速了解当前 UI。
 - 备份归档页修复 Bucket 为空时的交互：没有 Object Storage Bucket 时自动禁用云端上传，只创建本地备份并给出明确提示。
 - 配置列表新增“规则明细”只读入口，可查看 VCN 入站/出站安全规则，不触发放行或修改动作。
