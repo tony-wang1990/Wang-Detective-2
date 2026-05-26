@@ -20,13 +20,13 @@
 | 模块 | 当前完成度 | 100% 收口条件 | 验收方式 | 状态 |
 | --- | ---: | --- | --- | --- |
 | 部署与更新 | 91% | 全新安装、重复安装、更新、回滚、watcher、一键更新、低配 JVM 全部通过 | `install.sh`、`update.sh`、`rollback.sh`、`server-smoke-test.sh` | 进行中 |
-| Vue 新前端 | 92% | 全路由桌面/手机/明暗主题无明显溢出，按钮和表格交互自然 | 浏览器真实验收 + `npm --prefix frontend run build` | 进行中 |
+| Vue 新前端 | 93% | 全路由桌面/手机/明暗主题无明显溢出，按钮和表格交互自然 | 浏览器真实验收 + `npm --prefix frontend run build` + 远程路由 smoke | 进行中 |
 | OCI 核心管理 | 85% | 配置、任务、实例、VCN、安全规则、引导卷、换 IP、开停机都有真实返回和错误提示 | 线上非破坏性验收 + 专用资源高危验收 | 进行中 |
-| Web SSH/SFTP | 88% | 主机库、连接测试、Web SSH、resize、重连、会话列表、SFTP 文件操作闭环 | Web 页面实测 + 操作审计检查 | 进行中 |
+| Web SSH/SFTP | 89% | 主机库、连接测试、Web SSH、resize、重连、会话列表、SFTP 文件操作闭环 | Web 页面实测 + 操作审计检查 + 只读接口 smoke | 进行中 |
 | Telegram Bot | 86% | 运维中心、诊断、任务、日志、风险、备份、版本、实例向导全菜单可用 | Bot 菜单逐项点击 + 日志检查 | 进行中 |
-| 备份恢复 | 87% | 本地备份、恢复计划、定时备份、Bucket 为空、Object Storage 边界提示全部稳定 | Web + 脚本 + 测试备份包 | 进行中 |
-| 救援中心 | 68% | 当前定义为安全向导、脚本入口、风险提示 100%；高危自动救援继续保留实验区 | Web 页面 + 文档边界 + 专用机型测试 | 进行中 |
-| CI/测试 | 72% | 发布前能发现构建、脚本换行、脚本语法、API 映射、生产包资产、路由验收遗漏 | `verify-release.sh` + `acceptance-check.mjs` | 进行中 |
+| 备份恢复 | 88% | 本地备份、恢复计划、定时备份、Bucket 为空、Object Storage 边界提示全部稳定 | Web + 脚本 + 测试备份包 + 只读接口 smoke | 进行中 |
+| 救援中心 | 72% | 当前定义为安全向导、脚本入口、风险提示 100%；高危自动救援继续保留实验区 | Web 页面 + 文档边界 + 只读接口 smoke + 专用机型测试 | 进行中 |
+| CI/测试 | 74% | 发布前能发现构建、脚本换行、脚本语法、API 映射、生产包资产、路由验收遗漏 | `verify-release.sh` + `acceptance-check.mjs` + `remote-smoke-test` | 进行中 |
 
 ## Web 路由验收矩阵
 
@@ -38,12 +38,12 @@
 | `/dashboard/createTask` | 任务列表 | 搜索、筛选、分页、停止任务、批量停止、详情 | 待全量验收 |
 | `/dashboard/risk` | 风险看板 | 风险扫描、端口明细、收敛建议、空状态、超时提示 | 已验收一期 |
 | `/dashboard/backups` | 备份归档 | 本地备份、Bucket 为空、归档刷新、恢复计划、定时方案 | 已验收一期 |
-| `/dashboard/rescue` | 救援中心 | 安全边界、轻量自救、boot volume 向导、netboot 实验区说明 | 待全量验收 |
-| `/dashboard/features` | 功能中心 | 诊断、版本、入口跳转、旧页面迁移提示 | 待全量验收 |
+| `/dashboard/rescue` | 救援中心 | 安全边界、轻量自救、boot volume 向导、netboot 实验区说明 | 已验收一期 |
+| `/dashboard/features` | 功能中心 | 诊断、版本、入口跳转、旧页面迁移提示 | 已验收一期 |
 | `/dashboard/ops-terminal` | 运维终端 | 主机库、命令模板、Web SSH、SFTP、移动端不横向撑页 | 已验收一期 |
 | `/dashboard/ai-chat` | AI 聊天室 | 保留现状、错误提示、未配置 Key 的文案、发送按钮不被输入框撑高 | 已验收一期 |
-| `/dashboard/ociLog` | 服务日志 | WebSocket、暂停、筛选、错误统计、移动端滚动 | 待全量验收 |
-| `/dashboard/ops-audit` | 操作审计 | 搜索、筛选、详情、导出、空状态 | 待全量验收 |
+| `/dashboard/ociLog` | 服务日志 | WebSocket、暂停、筛选、错误统计、移动端滚动 | 入口已验收，WebSocket 待实测 |
+| `/dashboard/ops-audit` | 操作审计 | 搜索、筛选、详情、导出、空状态 | 已验收一期 |
 | `/dashboard/sysCfg` | 系统配置 | TG 配置识别、MFA、Google、测试消息、诊断、移动端按钮 | 已验收一期 |
 
 ## API 与真实 OCI 验收矩阵
@@ -79,8 +79,8 @@
 | `scripts/update.sh` | 拉取镜像、重启、保留数据、失败提示 | 待复验 |
 | `scripts/rollback.sh` | 指定镜像回滚、失败保护、健康检查 | 待复验 |
 | `scripts/server-smoke-test.sh` | 容器、健康、日志、资源、域名提示 | 待复验 |
-| `scripts/remote-smoke-test.sh` | 无 Node 环境可跑，17 项接口验收 | 已验收一期 |
-| `scripts/remote-smoke-test.mjs` | Windows/Node 环境可跑，curl 回退 | 已验收一期 |
+| `scripts/remote-smoke-test.sh` | 无 Node 环境可跑，39 项页面和只读接口验收 | 已验收一期 |
+| `scripts/remote-smoke-test.mjs` | Windows/Node 环境可跑，curl 回退，39 项页面和只读接口验收 | 已验收一期 |
 | `scripts/backup.sh` | 备份 data/keys/logs/config/scripts，生成校验信息 | 待复验 |
 | `scripts/restore.sh` | 恢复前确认、备份包校验、失败保护 | 待专用环境验收 |
 | `scripts/support-bundle.sh` | 生成排障包并脱敏 | 待复验 |

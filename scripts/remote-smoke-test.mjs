@@ -236,11 +236,20 @@ async function main() {
     await check('diagnostics', 'GET', '/api/v1/system/diagnostics', undefined, (payload) => Array.isArray(envelopeData(payload)?.checks));
     await check('version-info', 'GET', '/api/v1/system/version-info', undefined, (payload) => Boolean(envelopeData(payload)?.currentVersion));
     await check('glance', 'GET', '/api/sys/glance', undefined, (payload) => typeof envelopeData(payload) === 'object');
+    await check('sys-config', 'POST', '/api/sys/getSysCfg', undefined, (payload) => typeof envelopeData(payload) === 'object');
     const userPage = await check('oci-user-page', 'POST', '/api/oci/userPage', { currentPage: 1, pageSize: 5 }, (payload) => Array.isArray(envelopeData(payload)?.records));
     await check('task-page', 'POST', '/api/oci/createTaskPage', { currentPage: 1, pageSize: 5 }, (payload) => Array.isArray(envelopeData(payload)?.records));
     await check('audit-recent', 'GET', '/api/ops/audit/recent?limit=5', undefined, (payload) => Array.isArray(envelopeData(payload)));
+    await check('audit-search', 'GET', '/api/ops/audit/search?limit=5', undefined, (payload) => Array.isArray(envelopeData(payload)));
+    await check('audit-export', 'GET', '/api/ops/audit/export?limit=5', undefined, (payload) => typeof payload === 'string');
+    await check('ops-ssh-hosts', 'GET', '/api/ops/ssh/hosts', undefined, (payload) => Array.isArray(envelopeData(payload)));
+    await check('ops-ssh-sessions', 'GET', '/api/ops/ssh/sessions', undefined, (payload) => Array.isArray(envelopeData(payload)));
+    await check('ops-templates', 'GET', '/api/ops/templates', undefined, (payload) => Array.isArray(envelopeData(payload)));
     await check('backup-local', 'GET', '/api/v1/backups/local', undefined, (payload) => Array.isArray(envelopeData(payload)?.backups) || Array.isArray(envelopeData(payload)));
+    await check('backup-schedule-plan', 'GET', '/api/v1/backups/schedule-plan', undefined, (payload) => typeof envelopeData(payload) === 'object');
     await check('rescue-overview', 'GET', '/api/rescue/overview', undefined, (payload) => typeof envelopeData(payload) === 'object');
+    await check('rescue-light-script', 'GET', '/api/rescue/light-script', undefined, (payload) => typeof envelopeData(payload) === 'string' && envelopeData(payload).includes('bash'));
+    await check('rescue-netboot-script', 'GET', '/api/rescue/netboot-script?mode=ipxe', undefined, (payload) => typeof envelopeData(payload) === 'string' && envelopeData(payload).toLowerCase().includes('netboot'));
     await check('oci-risk', 'GET', '/api/v1/oci/risk?maxConfigs=1', undefined, (payload) => {
       const data = envelopeData(payload);
       return data && Array.isArray(data.configs) && data.configs.every((config) => !config.portExposures || Array.isArray(config.portExposures));

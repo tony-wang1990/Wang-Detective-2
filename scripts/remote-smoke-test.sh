@@ -131,11 +131,20 @@ if [[ -n "$TOKEN" ]]; then
   request "diagnostics" "GET" "/api/v1/system/diagnostics" "" '"checks"[[:space:]]*:' || true
   request "version-info" "GET" "/api/v1/system/version-info" "" '"currentVersion"[[:space:]]*:' || true
   request "glance" "GET" "/api/sys/glance" "" "" || true
+  request "sys-config" "POST" "/api/sys/getSysCfg" "" "" || true
   request "oci-user-page" "POST" "/api/oci/userPage" '{"currentPage":1,"pageSize":5}' '"records"[[:space:]]*:' || true
   request "task-page" "POST" "/api/oci/createTaskPage" '{"currentPage":1,"pageSize":5}' '"records"[[:space:]]*:' || true
   request "audit-recent" "GET" "/api/ops/audit/recent?limit=5" "" "" || true
+  request "audit-search" "GET" "/api/ops/audit/search?limit=5" "" "" || true
+  request "audit-export" "GET" "/api/ops/audit/export?limit=5" "" "" || true
+  request "ops-ssh-hosts" "GET" "/api/ops/ssh/hosts" "" "" || true
+  request "ops-ssh-sessions" "GET" "/api/ops/ssh/sessions" "" "" || true
+  request "ops-templates" "GET" "/api/ops/templates" "" "" || true
   request "backup-local" "GET" "/api/v1/backups/local" "" "" || true
+  request "backup-schedule-plan" "GET" "/api/v1/backups/schedule-plan" "" "" || true
   request "rescue-overview" "GET" "/api/rescue/overview" "" "" || true
+  request "rescue-light-script" "GET" "/api/rescue/light-script" "" "bash" || true
+  request "rescue-netboot-script" "GET" "/api/rescue/netboot-script?mode=ipxe" "" "netboot" || true
   request "oci-risk" "GET" "/api/v1/oci/risk?maxConfigs=1" "" '"configs"[[:space:]]*:' || true
 
   CFG_ID="$(extract_first_string "id" "$TMP_DIR/oci-user-page.json")"
