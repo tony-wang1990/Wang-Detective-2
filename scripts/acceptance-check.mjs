@@ -87,6 +87,32 @@ check('shell scripts use LF line endings', () => {
   assert(!crlf.length, `CRLF found in shell scripts: ${crlf.join(', ')}`);
 });
 
+check('shell scripts parse with bash when available', () => {
+  const bashVersion = spawnSync('bash', ['--version'], {
+    cwd: root,
+    encoding: 'utf8',
+    stdio: 'pipe'
+  });
+  if (bashVersion.error) {
+    console.log('SKIP bash is not available in this environment');
+    return;
+  }
+
+  const scripts = walk('scripts', (full) => full.endsWith('.sh'));
+  const bad = [];
+  for (const script of scripts) {
+    const result = spawnSync('bash', ['-n', script], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: 'pipe'
+    });
+    if (result.status !== 0) {
+      bad.push(`${rel(script)}: ${(result.stderr || result.stdout || '').trim()}`);
+    }
+  }
+  assert(!bad.length, bad.join('\n'));
+});
+
 check('key text files do not contain replacement characters', () => {
   const targets = [
     'README.md',
