@@ -105,6 +105,11 @@ const transfer = reactive({
   total: 0,
   percent: 0
 });
+const tunnel = reactive({
+  localPort: 8080,
+  remoteHost: '127.0.0.1',
+  remotePort: 80
+});
 const form = reactive({
   name: '',
   tags: '',
@@ -124,6 +129,13 @@ const currentHost = computed(() => hosts.value.find((host) => host.id === select
 const hostGroups = computed(() => Array.from(new Set(hosts.value.map((item) => item.hostGroup || '默认分组'))));
 const terminalConnected = ref(false);
 const commandRisk = computed(() => detectCommandRisk(command.value));
+const tunnelCommand = computed(() => {
+  const source = currentHost.value || form;
+  const host = source.host || '<host>';
+  const user = source.username || 'root';
+  const port = Number(source.port || 22);
+  return `ssh -N -L 127.0.0.1:${Number(tunnel.localPort || 8080)}:${tunnel.remoteHost || '127.0.0.1'}:${Number(tunnel.remotePort || 80)} ${user}@${host} -p ${port}`;
+});
 const selectedSftpEntry = computed(() => {
   const path = selectedSftpPath.value || editorPath.value;
   return sftpEntries.value.find((item) => (item.path || item.name) === path);
@@ -515,6 +527,17 @@ async function importHosts() {
   }
   output.value = errors.length ? errors.join('\n') : `已导入 ${success} 台 SSH 主机`;
   status.value = `批量导入完成：成功 ${success}，失败 ${errors.length}`;
+}
+
+async function copyTunnelCommand() {
+  const text = tunnelCommand.value;
+  try {
+    await navigator.clipboard.writeText(text);
+    status.value = '端口转发命令已复制';
+  } catch {
+    output.value = text;
+    status.value = '无法访问剪贴板，命令已写入输出区';
+  }
 }
 
 async function testConnection() {
@@ -986,6 +1009,16 @@ onBeforeUnmount(() => {
               placeholder="CSV: 名称,主机,端口,用户,认证,password/privateKey,标签,分组&#10;JSON: [{&quot;name&quot;:&quot;tokyo&quot;,&quot;host&quot;:&quot;1.2.3.4&quot;,&quot;username&quot;:&quot;root&quot;}]"
             ></textarea>
             <button type="button" class="ghost" @click="importHosts"><Upload :size="15" />导入</button>
+          </details>
+          <details class="wd-import-box">
+            <summary>端口转发命令</summary>
+            <div class="wd-tunnel-grid">
+              <label><span>本地端口</span><input v-model.number="tunnel.localPort" type="number" min="1" max="65535" /></label>
+              <label><span>远端地址</span><input v-model="tunnel.remoteHost" /></label>
+              <label><span>远端端口</span><input v-model.number="tunnel.remotePort" type="number" min="1" max="65535" /></label>
+            </div>
+            <code class="wd-inline-code">{{ tunnelCommand }}</code>
+            <button type="button" class="ghost" @click="copyTunnelCommand"><Copy :size="15" />复制命令</button>
           </details>
         </div>
       </aside>

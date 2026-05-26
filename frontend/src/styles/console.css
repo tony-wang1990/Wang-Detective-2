@@ -788,6 +788,40 @@ html.dark .wd-leaflet-map .leaflet-tile {
   justify-self: start;
 }
 
+.wd-tunnel-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.wd-tunnel-grid label {
+  display: grid;
+  gap: 5px;
+  color: var(--wd-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wd-tunnel-grid input {
+  min-height: 34px;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--wd-surface);
+  color: var(--wd-text);
+}
+
+.wd-inline-code {
+  display: block;
+  overflow-x: auto;
+  border: 1px solid var(--wd-line);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--wd-surface-2);
+  color: var(--wd-text);
+  white-space: nowrap;
+}
+
 .wd-inline-search input:focus,
 .wd-command-row input:focus,
 .wd-inline-field input:focus,
