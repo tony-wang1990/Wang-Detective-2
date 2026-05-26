@@ -230,6 +230,7 @@ bash scripts/remote-smoke-test.sh https://your-domain.example admin 'your-passwo
 这条命令只做安全读检查，不会启动、停止、删除或修改 OCI 资源。当前覆盖：
 
 - 健康检查、登录、系统诊断、版本信息。
+- 旧地图、旧功能中心、旧运维终端入口是否已经迁移到 Vue 原生路由。
 - 首页概览、OCI 配置分页、任务分页、最近审计。
 - 本地备份、救援中心、风险看板。
 - VCN 分页和入站/出站安全规则只读明细。

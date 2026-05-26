@@ -65,6 +65,7 @@ docker compose up -d --force-recreate
 
 - 新增 `scripts/remote-smoke-test.sh` 和 `scripts/remote-smoke-test.mjs` 线上验收脚本，可自动检查健康、登录、系统诊断、版本、首页概览、OCI 配置、任务、审计、备份、救援和风险接口；服务器没有 Node 时直接使用 `.sh` 版本。
 - 远程验收脚本已补充 VCN 和安全规则只读接口检查，并校验风险看板返回端口暴露结构。
+- 远程验收脚本已补充旧静态入口迁移检查，避免 `/ip-map.html`、`/wang-features.html`、`/ops-terminal.html` 回退到旧 UI 或静态假数据。
 - JS 版远程验收脚本支持 `--transport auto|fetch|curl`，当 Node fetch 直连 Cloudflare 超时时会自动回退到 curl。
 - Telegram `/terminal` 命令改为真实运维入口菜单，可直接进入 SSH 管理、主机概览、最近日志、错误日志、系统诊断和任务状态。
 - 旧版静态地图 `/ip-map.html` 已停止展示模拟实例点位，统一跳转到新版 Vue 首页，避免误判为假数据。

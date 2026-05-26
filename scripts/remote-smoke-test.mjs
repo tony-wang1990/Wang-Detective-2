@@ -195,6 +195,15 @@ async function main() {
     const data = envelopeData(payload);
     return data?.status === 'UP';
   });
+  await check('legacy-map-redirect', 'GET', '/ip-map.html', undefined, (payload) => {
+    return typeof payload === 'string' && payload.includes('/dashboard/home');
+  });
+  await check('legacy-features-redirect', 'GET', '/wang-features.html', undefined, (payload) => {
+    return typeof payload === 'string' && payload.includes('/dashboard/features');
+  });
+  await check('legacy-terminal-redirect', 'GET', '/ops-terminal.html', undefined, (payload) => {
+    return typeof payload === 'string' && payload.includes('/dashboard/ops-terminal');
+  });
 
   const login = await check('login', 'POST', '/api/sys/login', {
     account: username,

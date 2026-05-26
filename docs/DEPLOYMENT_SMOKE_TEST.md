@@ -57,11 +57,14 @@ WANG_DETECTIVE_PASSWORD='your-password' \
 bash scripts/remote-smoke-test.sh
 ```
 
-当前远程脚本会检查 14 个安全读接口：
+当前远程脚本会检查 17 个安全读接口：
 
 | 检查项 | 说明 |
 | --- | --- |
 | `health` | `/actuator/health` 必须返回 `UP` |
+| `legacy-map-redirect` | 旧地图入口 `/ip-map.html` 必须指向新版首页 |
+| `legacy-features-redirect` | 旧功能中心入口 `/wang-features.html` 必须指向 Vue 功能中心 |
+| `legacy-terminal-redirect` | 旧运维终端入口 `/ops-terminal.html` 必须指向 Vue 运维终端 |
 | `login` | 使用真实账号登录并提取 Bearer token |
 | `diagnostics` | 系统诊断接口返回检查项 |
 | `version-info` | 版本检查接口返回当前版本 |

@@ -101,6 +101,9 @@ request() {
 echo "Remote smoke test: $BASE_URL"
 
 request "health" "GET" "/actuator/health" "" '"status"[[:space:]]*:[[:space:]]*"UP"' || true
+request "legacy-map-redirect" "GET" "/ip-map.html" "" "/dashboard/home" || true
+request "legacy-features-redirect" "GET" "/wang-features.html" "" "/dashboard/features" || true
+request "legacy-terminal-redirect" "GET" "/ops-terminal.html" "" "/dashboard/ops-terminal" || true
 
 LOGIN_BODY="{\"account\":\"$(json_escape "$USERNAME")\",\"password\":\"$(json_escape "$PASSWORD")\"}"
 if request "login" "POST" "/api/sys/login" "$LOGIN_BODY" '"token"[[:space:]]*:'; then
