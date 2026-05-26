@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { Download, FilePenLine, FolderPlus, FolderOpen, ListChecks, Play, RefreshCw, Save, Server, Square, Terminal, Trash2, Upload, Wifi, Zap } from 'lucide-vue-next';
-import { opsDelete, opsDownload, opsGet, opsPost, opsUpload } from '../api/http';
+import { opsDelete, opsDownloadWithProgress, opsGet, opsPost, opsUploadWithProgress, type TransferProgress } from '../api/http';
 
 type Host = {
   id?: string;
@@ -81,6 +81,14 @@ const renameTarget = ref('');
 const deleteConfirm = ref('');
 const uploadTargetPath = ref('');
 const uploadFileInput = ref<HTMLInputElement | null>(null);
+const transfer = reactive({
+  active: false,
+  mode: '',
+  filename: '',
+  loaded: 0,
+  total: 0,
+  percent: 0
+});
 const form = reactive({
   name: '',
   tags: '',
@@ -99,6 +107,13 @@ let resizeTimer: number | undefined;
 const currentHost = computed(() => hosts.value.find((host) => host.id === selectedHostId.value));
 const hostGroups = computed(() => Array.from(new Set(hosts.value.map((item) => item.hostGroup || '默认分组'))));
 const terminalConnected = ref(false);
+const transferText = computed(() => {
+  if (!transfer.filename) return '暂无传输任务';
+  const loaded = formatBytes(transfer.loaded);
+  const total = transfer.total ? formatBytes(transfer.total) : '未知大小';
+  const percent = transfer.percent ? `${transfer.percent}%` : '计算中';
+  return `${transfer.mode} ${transfer.filename} · ${loaded} / ${total} · ${percent}`;
+});
 
 function credential() {
   if (selectedHostId.value) {
@@ -153,6 +168,27 @@ function downloadName(path: string, disposition?: string) {
   const normalized = String(path || 'download.bin').replace(/\\/g, '/');
   const name = normalized.substring(normalized.lastIndexOf('/') + 1);
   return name || 'download.bin';
+}
+
+function beginTransfer(mode: string, filename: string, total = 0) {
+  transfer.active = true;
+  transfer.mode = mode;
+  transfer.filename = filename;
+  transfer.loaded = 0;
+  transfer.total = total;
+  transfer.percent = 0;
+}
+
+function updateTransfer(progress: TransferProgress) {
+  transfer.loaded = progress.loaded || transfer.loaded;
+  transfer.total = progress.total || transfer.total;
+  transfer.percent = progress.percent ?? (transfer.total ? Math.min(100, Math.round((transfer.loaded / transfer.total) * 100)) : 0);
+}
+
+function finishTransfer(message: string) {
+  transfer.active = false;
+  transfer.percent = 100;
+  status.value = message;
 }
 
 function chooseEntry(entry: SftpEntry) {
@@ -513,19 +549,22 @@ async function downloadSftpFile(path = selectedSftpPath.value || editorPath.valu
     return;
   }
   status.value = '下载准备中';
+  const entry = sftpEntries.value.find((item) => (item.path || item.name) === path);
+  beginTransfer('下载', downloadName(path), entry?.size || 0);
   try {
-    const result = await opsDownload('/sftp/download', {
+    const result = await opsDownloadWithProgress('/sftp/download', {
       credential: credential(),
       path
-    });
+    }, updateTransfer);
     const url = URL.createObjectURL(result.blob);
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = downloadName(path, result.filename);
     anchor.click();
     URL.revokeObjectURL(url);
-    status.value = '文件下载已触发';
+    finishTransfer('文件下载已触发');
   } catch (error) {
+    transfer.active = false;
     status.value = errorMessage(error);
   }
 }
@@ -543,14 +582,16 @@ async function uploadSftpFile() {
   }
   const targetPath = uploadTargetPath.value || joinRemotePath(sftpPath.value, file.name);
   status.value = '上传文件中';
+  beginTransfer('上传', file.name, file.size);
   try {
-    await opsUpload(targetPath, selectedHostId.value, file);
-    status.value = '文件已上传';
+    await opsUploadWithProgress(targetPath, selectedHostId.value, file, updateTransfer);
+    finishTransfer('文件已上传');
     if (input) {
       input.value = '';
     }
     await listSftp();
   } catch (error) {
+    transfer.active = false;
     status.value = errorMessage(error);
   }
 }
@@ -786,7 +827,7 @@ onBeforeUnmount(() => {
               <button type="button" @click="renameSftpPath"><FilePenLine :size="16" />重命名</button>
             </div>
             <button type="button" class="ghost" @click="readSftpFile()"><FilePenLine :size="16" />读取</button>
-            <button type="button" class="ghost" @click="downloadSftpFile()"><Download :size="16" />下载</button>
+            <button type="button" class="ghost" :disabled="transfer.active" @click="downloadSftpFile()"><Download :size="16" />下载</button>
             <button type="button" class="danger" @click="deleteSftpPath"><Trash2 :size="16" />删除</button>
           </div>
           <div class="wd-danger-confirm">
@@ -827,7 +868,16 @@ onBeforeUnmount(() => {
           <div class="wd-upload-row">
             <input ref="uploadFileInput" type="file" />
             <input v-model="uploadTargetPath" placeholder="上传目标路径，留空则使用当前目录/文件名" />
-            <button type="button" @click="uploadSftpFile"><Upload :size="16" />上传</button>
+            <button type="button" :disabled="transfer.active" @click="uploadSftpFile"><Upload :size="16" />上传</button>
+          </div>
+          <div v-if="transfer.filename" class="wd-transfer-progress" :class="{ active: transfer.active }">
+            <div>
+              <b>{{ transfer.active ? '传输中' : '最近传输' }}</b>
+              <span>{{ transferText }}</span>
+            </div>
+            <div class="wd-progress-track">
+              <i :style="{ width: `${transfer.percent || 0}%` }"></i>
+            </div>
           </div>
           <p class="wd-muted-line">提示：上传接口目前需要选择“保存的主机”，临时手动主机可先保存后再上传。</p>
         </div>

@@ -49,6 +49,11 @@ export type PageResult<T = Record<string, unknown>> = {
 };
 
 type ToastKind = 'success' | 'error' | 'info';
+export type TransferProgress = {
+  loaded: number;
+  total?: number;
+  percent?: number;
+};
 
 let activeRequests = 0;
 
@@ -242,6 +247,61 @@ export async function opsDownload(url: string, body: unknown): Promise<{ blob: B
   }
 }
 
+export async function opsDownloadWithProgress(
+  url: string,
+  body: unknown,
+  onProgress?: (progress: TransferProgress) => void
+): Promise<{ blob: Blob; filename?: string }> {
+  const done = beginNetwork(`/api/ops${url}`);
+  try {
+    const response = await fetchWithTimeout(`/api/ops${url}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify(body)
+    }, DOWNLOAD_TIMEOUT_MS);
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `${url} ${response.status}`);
+    }
+
+    const total = Number(response.headers.get('Content-Length') || 0);
+    const filename = response.headers.get('Content-Disposition') || undefined;
+    if (!response.body) {
+      const blob = await response.blob();
+      onProgress?.({ loaded: blob.size, total: blob.size, percent: 100 });
+      return { blob, filename };
+    }
+
+    const reader = response.body.getReader();
+    const chunks: BlobPart[] = [];
+    let loaded = 0;
+    while (true) {
+      const { done: readerDone, value } = await reader.read();
+      if (readerDone) break;
+      if (value) {
+        chunks.push(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength) as ArrayBuffer);
+        loaded += value.byteLength;
+        onProgress?.({
+          loaded,
+          total: total || undefined,
+          percent: total ? Math.min(100, Math.round((loaded / total) * 100)) : undefined
+        });
+      }
+    }
+
+    const blob = new Blob(chunks, {
+      type: response.headers.get('Content-Type') || 'application/octet-stream'
+    });
+    onProgress?.({ loaded, total: total || loaded, percent: 100 });
+    return { blob, filename };
+  } finally {
+    done();
+  }
+}
+
 export async function opsUpload(path: string, hostId: string, file: File): Promise<ApiEnvelope<void>> {
   const form = new FormData();
   form.append('hostId', hostId);
@@ -258,6 +318,77 @@ export async function opsUpload(path: string, hostId: string, file: File): Promi
   } finally {
     done();
   }
+}
+
+export function opsUploadWithProgress(
+  path: string,
+  hostId: string,
+  file: File,
+  onProgress?: (progress: TransferProgress) => void
+): Promise<ApiEnvelope<void>> {
+  const form = new FormData();
+  form.append('hostId', hostId);
+  form.append('path', path);
+  form.append('file', file);
+  const done = beginNetwork('/api/ops/sftp/upload');
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/ops/sftp/upload');
+    xhr.timeout = FORM_TIMEOUT_MS;
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+
+    xhr.upload.onprogress = (event) => {
+      onProgress?.({
+        loaded: event.loaded,
+        total: event.lengthComputable ? event.total : file.size,
+        percent: event.lengthComputable && event.total
+          ? Math.min(100, Math.round((event.loaded / event.total) * 100))
+          : undefined
+      });
+    };
+
+    xhr.onload = () => {
+      done();
+      let payload: ApiEnvelope<void> | undefined;
+      try {
+        payload = xhr.responseText ? JSON.parse(xhr.responseText) : undefined;
+      } catch {
+        // Keep payload undefined and use status text below.
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && payload?.success !== false) {
+        onProgress?.({ loaded: file.size, total: file.size, percent: 100 });
+        resolve(payload || { success: true, data: undefined as void });
+        return;
+      }
+      if (xhr.status === 401) {
+        sessionStorage.clear();
+        notifyGlobal('登录已过期，请重新登录', 'error');
+        window.setTimeout(() => {
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
+        }, 600);
+      }
+      reject(new Error(payload?.msg || payload?.message || xhr.responseText || `upload ${xhr.status}`));
+    };
+
+    xhr.onerror = () => {
+      done();
+      reject(new Error('上传失败：网络连接异常'));
+    };
+    xhr.ontimeout = () => {
+      done();
+      reject(new Error(`上传超时：超过 ${Math.round(FORM_TIMEOUT_MS / 1000)} 秒无响应`));
+    };
+    xhr.onabort = () => {
+      done();
+      reject(new Error('上传已取消'));
+    };
+    xhr.send(form);
+  });
 }
 
 export async function rawGet<T>(url: string): Promise<T> {
