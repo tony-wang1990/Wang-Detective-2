@@ -20,7 +20,7 @@
 | 模块 | 当前完成度 | 100% 收口条件 | 验收方式 | 状态 |
 | --- | ---: | --- | --- | --- |
 | 部署与更新 | 91% | 全新安装、重复安装、更新、回滚、watcher、一键更新、低配 JVM 全部通过 | `install.sh`、`update.sh`、`rollback.sh`、`server-smoke-test.sh` | 进行中 |
-| Vue 新前端 | 91% | 全路由桌面/手机/明暗主题无明显溢出，按钮和表格交互自然 | 浏览器真实验收 + `npm --prefix frontend run build` | 进行中 |
+| Vue 新前端 | 92% | 全路由桌面/手机/明暗主题无明显溢出，按钮和表格交互自然 | 浏览器真实验收 + `npm --prefix frontend run build` | 进行中 |
 | OCI 核心管理 | 85% | 配置、任务、实例、VCN、安全规则、引导卷、换 IP、开停机都有真实返回和错误提示 | 线上非破坏性验收 + 专用资源高危验收 | 进行中 |
 | Web SSH/SFTP | 88% | 主机库、连接测试、Web SSH、resize、重连、会话列表、SFTP 文件操作闭环 | Web 页面实测 + 操作审计检查 | 进行中 |
 | Telegram Bot | 86% | 运维中心、诊断、任务、日志、风险、备份、版本、实例向导全菜单可用 | Bot 菜单逐项点击 + 日志检查 | 进行中 |
@@ -41,7 +41,7 @@
 | `/dashboard/rescue` | 救援中心 | 安全边界、轻量自救、boot volume 向导、netboot 实验区说明 | 待全量验收 |
 | `/dashboard/features` | 功能中心 | 诊断、版本、入口跳转、旧页面迁移提示 | 待全量验收 |
 | `/dashboard/ops-terminal` | 运维终端 | 主机库、命令模板、Web SSH、SFTP、移动端不横向撑页 | 已验收一期 |
-| `/dashboard/ai-chat` | AI 聊天室 | 保留现状、错误提示、未配置 Key 的文案 | 待轻量验收 |
+| `/dashboard/ai-chat` | AI 聊天室 | 保留现状、错误提示、未配置 Key 的文案、发送按钮不被输入框撑高 | 已验收一期 |
 | `/dashboard/ociLog` | 服务日志 | WebSocket、暂停、筛选、错误统计、移动端滚动 | 待全量验收 |
 | `/dashboard/ops-audit` | 操作审计 | 搜索、筛选、详情、导出、空状态 | 待全量验收 |
 | `/dashboard/sysCfg` | 系统配置 | TG 配置识别、MFA、Google、测试消息、诊断、移动端按钮 | 已验收一期 |

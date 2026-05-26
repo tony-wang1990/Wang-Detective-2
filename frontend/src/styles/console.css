@@ -2009,9 +2009,15 @@ html.dark .wd-leaflet-map .leaflet-tile {
 .wd-chat-input {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) auto;
+  align-items: start;
   gap: 10px;
   padding: 14px;
   border-top: 1px solid var(--wd-line);
+}
+
+.wd-chat-input button {
+  align-self: start;
+  min-height: 40px;
 }
 
 .wd-login {
