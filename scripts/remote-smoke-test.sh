@@ -39,6 +39,14 @@ extract_token() {
     | sed 's/.*"token"[[:space:]]*:[[:space:]]*"//;s/"$//'
 }
 
+extract_first_string() {
+  local key="$1"
+  local file="$2"
+  grep -o "\"$key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$file" 2>/dev/null \
+    | head -n 1 \
+    | sed "s/.*\"$key\"[[:space:]]*:[[:space:]]*\"//;s/\"$//"
+}
+
 print_result() {
   local state="$1"
   local status="$2"
@@ -108,7 +116,20 @@ if [[ -n "$TOKEN" ]]; then
   request "audit-recent" "GET" "/api/ops/audit/recent?limit=5" "" "" || true
   request "backup-local" "GET" "/api/v1/backups/local" "" "" || true
   request "rescue-overview" "GET" "/api/rescue/overview" "" "" || true
-  request "oci-risk" "GET" "/api/v1/oci/risk?maxConfigs=1" "" "" || true
+  request "oci-risk" "GET" "/api/v1/oci/risk?maxConfigs=1" "" '"configs"[[:space:]]*:' || true
+
+  CFG_ID="$(extract_first_string "id" "$TMP_DIR/oci-user-page.json")"
+  if [[ -n "$CFG_ID" ]]; then
+    VCN_BODY="{\"ociCfgId\":\"$(json_escape "$CFG_ID")\",\"currentPage\":1,\"pageSize\":10,\"cleanReLaunch\":true}"
+    if request "vcn-page" "POST" "/api/vcn/page" "$VCN_BODY" '"records"[[:space:]]*:'; then
+      VCN_ID="$(extract_first_string "id" "$TMP_DIR/vcn-page.json")"
+      if [[ -n "$VCN_ID" ]]; then
+        SECURITY_BASE="\"ociCfgId\":\"$(json_escape "$CFG_ID")\",\"vcnId\":\"$(json_escape "$VCN_ID")\",\"currentPage\":1,\"pageSize\":20,\"cleanReLaunch\":false"
+        request "security-rules-ingress" "POST" "/api/securityRule/page" "{$SECURITY_BASE,\"type\":0}" '"records"[[:space:]]*:' || true
+        request "security-rules-egress" "POST" "/api/securityRule/page" "{$SECURITY_BASE,\"type\":1}" '"records"[[:space:]]*:' || true
+      fi
+    fi
+  fi
 else
   echo "Skip authenticated checks because login token was not returned."
 fi

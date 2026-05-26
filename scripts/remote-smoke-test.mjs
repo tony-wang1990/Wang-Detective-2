@@ -131,12 +131,43 @@ async function main() {
     await check('diagnostics', 'GET', '/api/v1/system/diagnostics', undefined, (payload) => Array.isArray(envelopeData(payload)?.checks));
     await check('version-info', 'GET', '/api/v1/system/version-info', undefined, (payload) => Boolean(envelopeData(payload)?.currentVersion));
     await check('glance', 'GET', '/api/sys/glance', undefined, (payload) => typeof envelopeData(payload) === 'object');
-    await check('oci-user-page', 'POST', '/api/oci/userPage', { currentPage: 1, pageSize: 5 }, (payload) => Array.isArray(envelopeData(payload)?.records));
+    const userPage = await check('oci-user-page', 'POST', '/api/oci/userPage', { currentPage: 1, pageSize: 5 }, (payload) => Array.isArray(envelopeData(payload)?.records));
     await check('task-page', 'POST', '/api/oci/createTaskPage', { currentPage: 1, pageSize: 5 }, (payload) => Array.isArray(envelopeData(payload)?.records));
     await check('audit-recent', 'GET', '/api/ops/audit/recent?limit=5', undefined, (payload) => Array.isArray(envelopeData(payload)));
     await check('backup-local', 'GET', '/api/v1/backups/local', undefined, (payload) => Array.isArray(envelopeData(payload)?.backups) || Array.isArray(envelopeData(payload)));
     await check('rescue-overview', 'GET', '/api/rescue/overview', undefined, (payload) => typeof envelopeData(payload) === 'object');
-    await check('oci-risk', 'GET', '/api/v1/oci/risk?maxConfigs=1', undefined, (payload) => typeof envelopeData(payload) === 'object');
+    await check('oci-risk', 'GET', '/api/v1/oci/risk?maxConfigs=1', undefined, (payload) => {
+      const data = envelopeData(payload);
+      return data && Array.isArray(data.configs) && data.configs.every((config) => !config.portExposures || Array.isArray(config.portExposures));
+    });
+
+    const firstConfig = envelopeData(userPage)?.records?.find((item) => item?.id);
+    if (firstConfig?.id) {
+      const vcnPage = await check('vcn-page', 'POST', '/api/vcn/page', {
+        ociCfgId: firstConfig.id,
+        currentPage: 1,
+        pageSize: 10,
+        cleanReLaunch: true
+      }, (payload) => Array.isArray(envelopeData(payload)?.records));
+      const firstVcn = envelopeData(vcnPage)?.records?.find((item) => item?.id);
+      if (firstVcn?.id) {
+        const securityBase = {
+          ociCfgId: firstConfig.id,
+          vcnId: firstVcn.id,
+          currentPage: 1,
+          pageSize: 20,
+          cleanReLaunch: false
+        };
+        await check('security-rules-ingress', 'POST', '/api/securityRule/page', {
+          ...securityBase,
+          type: 0
+        }, (payload) => Array.isArray(envelopeData(payload)?.records));
+        await check('security-rules-egress', 'POST', '/api/securityRule/page', {
+          ...securityBase,
+          type: 1
+        }, (payload) => Array.isArray(envelopeData(payload)?.records));
+      }
+    }
   }
 
   console.log('\nResult:');
