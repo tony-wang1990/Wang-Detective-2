@@ -65,6 +65,7 @@ docker compose up -d --force-recreate
 
 - 新增 `scripts/remote-smoke-test.sh` 和 `scripts/remote-smoke-test.mjs` 线上验收脚本，可自动检查健康、登录、系统诊断、版本、首页概览、OCI 配置、任务、审计、备份、救援和风险接口；服务器没有 Node 时直接使用 `.sh` 版本。
 - 远程验收脚本已补充 VCN 和安全规则只读接口检查，并校验风险看板返回端口暴露结构。
+- JS 版远程验收脚本支持 `--transport auto|fetch|curl`，当 Node fetch 直连 Cloudflare 超时时会自动回退到 curl。
 - README 新增新版首页和风险看板截图，便于部署前快速了解当前 UI。
 - 备份归档页修复 Bucket 为空时的交互：没有 Object Storage Bucket 时自动禁用云端上传，只创建本地备份并给出明确提示。
 - 配置列表新增“规则明细”只读入口，可查看 VCN 入站/出站安全规则，不触发放行或修改动作。

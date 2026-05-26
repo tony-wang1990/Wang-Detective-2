@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { spawn } from 'node:child_process';
+
 const DEFAULT_TIMEOUT_MS = 20000;
 
 function arg(name, fallback = '') {
@@ -16,6 +18,7 @@ const username = arg('username', process.env.WANG_DETECTIVE_USERNAME || process.
 const password = arg('password', process.env.WANG_DETECTIVE_PASSWORD || process.env.ADMIN_PASSWORD || '');
 const timeoutMs = Number(arg('timeout', process.env.WANG_DETECTIVE_TIMEOUT_MS || DEFAULT_TIMEOUT_MS));
 const insecure = arg('insecure', process.env.WANG_DETECTIVE_INSECURE || '') === '1';
+const transport = arg('transport', process.env.WANG_DETECTIVE_TRANSPORT || 'auto');
 
 if (insecure) {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -24,6 +27,7 @@ if (insecure) {
 if (!baseUrl || !username || !password) {
   console.error('Usage: node scripts/remote-smoke-test.mjs --base https://example.com --username admin --password "***"');
   console.error('Or set WANG_DETECTIVE_BASE_URL, WANG_DETECTIVE_USERNAME, WANG_DETECTIVE_PASSWORD.');
+  console.error('Optional: --transport auto|fetch|curl. Curl mode is useful when Node fetch cannot reach Cloudflare from the current host.');
   process.exit(2);
 }
 
@@ -39,6 +43,9 @@ function endpoint(path) {
 }
 
 async function fetchWithTimeout(url, init = {}, timeout = timeoutMs) {
+  if (transport === 'curl') {
+    return curlWithTimeout(url, init, timeout);
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   const started = Date.now();
@@ -58,10 +65,79 @@ async function fetchWithTimeout(url, init = {}, timeout = timeoutMs) {
     if (error?.name === 'AbortError') {
       throw new Error(`timeout after ${Math.round(timeout / 1000)}s (${elapsedMs}ms)`);
     }
+    if (transport === 'auto') {
+      return curlWithTimeout(url, init, timeout);
+    }
     throw error;
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function curlWithTimeout(url, init = {}, timeout = timeoutMs) {
+  const started = Date.now();
+  const curlBin = process.platform === 'win32' ? 'curl.exe' : 'curl';
+  const args = [
+    '-sS',
+    '--connect-timeout',
+    '8',
+    '--max-time',
+    String(Math.max(1, Math.ceil(timeout / 1000))),
+    '-X',
+    init.method || 'GET',
+    '-w',
+    '\n%{http_code}'
+  ];
+  if (insecure) {
+    args.push('-k');
+  }
+  for (const [key, value] of Object.entries(init.headers || {})) {
+    if (value !== undefined && value !== null && value !== '') {
+      args.push('-H', `${key}: ${value}`);
+    }
+  }
+  if (init.body !== undefined) {
+    args.push('--data', String(init.body));
+  }
+  args.push(url);
+
+  const { stdout, stderr, code } = await new Promise((resolve) => {
+    const child = spawn(curlBin, args, { windowsHide: true });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('error', (error) => resolve({ stdout, stderr: error.message, code: 127 }));
+    child.on('close', (code) => resolve({ stdout, stderr, code }));
+  });
+
+  const elapsedMs = Date.now() - started;
+  if (code !== 0) {
+    throw new Error(stderr.trim() || `curl exit ${code}`);
+  }
+  const marker = stdout.lastIndexOf('\n');
+  const text = marker >= 0 ? stdout.slice(0, marker) : stdout;
+  const status = Number(marker >= 0 ? stdout.slice(marker + 1).trim() : 0);
+  let body = text;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    // Keep plain text.
+  }
+  return {
+    response: {
+      ok: status >= 200 && status < 300,
+      status
+    },
+    body,
+    elapsedMs
+  };
 }
 
 function authHeaders() {
