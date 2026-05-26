@@ -113,6 +113,8 @@ docker compose up -d --force-recreate
 
 ## 未完成和后续重点
 
+当前阶段冻结新功能，优先按 [100% 收口验收矩阵](docs/ACCEPTANCE_MATRIX.md) 把现有模块逐项验收到可交付状态。
+
 | 优先级 | 事项 | 说明 |
 |---|---|---|
 | P0 | 真实 OCI 高危操作验收 | 非破坏性接口已通过线上验收；终止实例、改安全规则、拆卷救援、恢复回滚等高危动作仍需在专用测试资源上逐项验收 |
@@ -156,6 +158,7 @@ node scripts/remote-smoke-test.mjs
 ## 文档索引
 
 - 部署验收：[docs/DEPLOYMENT_SMOKE_TEST.md](docs/DEPLOYMENT_SMOKE_TEST.md)
+- 100% 收口验收矩阵：[docs/ACCEPTANCE_MATRIX.md](docs/ACCEPTANCE_MATRIX.md)
 - 代码审计：[docs/CODE_AUDIT_REPORT.md](docs/CODE_AUDIT_REPORT.md)
 - 项目路线：[docs/PROJECT_PROGRESS_ROADMAP.md](docs/PROJECT_PROGRESS_ROADMAP.md)
 - UI 路线：[docs/UI_REDESIGN_ROADMAP.md](docs/UI_REDESIGN_ROADMAP.md)

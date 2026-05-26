@@ -57,6 +57,10 @@ if command -v node >/dev/null 2>&1 && [ -f scripts/verify-ui-api-mapping.mjs ]; 
     run node scripts/verify-ui-api-mapping.mjs
 fi
 
+if command -v node >/dev/null 2>&1 && [ -f scripts/acceptance-check.mjs ]; then
+    run node scripts/acceptance-check.mjs
+fi
+
 if [ "$RUN_SHELLCHECK" = "1" ]; then
     if command -v shellcheck >/dev/null 2>&1; then
         run shellcheck scripts/*.sh
