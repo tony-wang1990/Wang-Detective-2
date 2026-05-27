@@ -76,8 +76,8 @@
 | 脚本 | 必验项 | 当前状态 |
 | --- | --- | --- |
 | `scripts/install.sh` | 全新安装、重复安装、同步脚本、保留 `.env`、健康等待 | 已验收一期 |
-| `scripts/update.sh` | 拉取镜像、重启、保留数据、失败提示 | 待复验 |
-| `scripts/rollback.sh` | 指定镜像回滚、失败保护、健康检查 | 待复验 |
+| `scripts/update.sh` | 拉取镜像、重启、保留数据、健康等待、成功状态留痕、可选体检 | 待复验 |
+| `scripts/rollback.sh` | 指定镜像回滚、更新前镜像自动读取、回滚前后状态留痕、健康检查、可选体检 | 待复验 |
 | `scripts/server-smoke-test.sh` | 容器、健康、日志、脚本语法、最近日志接口、资源、域名提示 | 待复验 |
 | `scripts/remote-smoke-test.sh` | 无 Node 环境可跑，40 项页面和只读接口验收；路由名会安全转换为临时文件名 | 已验收一期 |
 | `scripts/remote-smoke-test.mjs` | Windows/Node 环境可跑，curl 回退，40 项页面和只读接口验收 | 已验收一期 |

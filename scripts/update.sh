@@ -114,6 +114,14 @@ wait_for_health
 
 new_revision="$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' king-detective 2>/dev/null || true)"
 new_image_id="$(docker inspect --format '{{.Image}}' king-detective 2>/dev/null || true)"
+{
+    echo "time=$(date '+%Y-%m-%d %H:%M:%S')"
+    echo "target_image=$IMAGE"
+    echo "revision=${new_revision:-unknown}"
+    echo "image_id=${new_image_id:-unknown}"
+    echo "previous_image=$current_image"
+    echo "previous_image_id=$current_image_id"
+} > runtime/last_successful_update
 log "更新完成。revision=${new_revision:-unknown} image_id=${new_image_id:-unknown}"
 
 if [ "$RUN_SMOKE_AFTER_UPDATE" = "1" ] && [ -x scripts/server-smoke-test.sh ]; then

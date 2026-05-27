@@ -99,6 +99,7 @@ docker compose up -d --force-recreate
 - 发布前静态验收新增 smoke 临时文件命名检查，防止路由名里的 `/`、`:` 再次导致 shell 版远程验收误报。
 - `restore.sh` 新增 `RESTORE_VERIFY_ONLY=1` 安全校验模式，可先检查备份包 tar、payload/meta 结构和 sha256，再决定是否真正恢复。
 - `maintenance.sh` 新增 `verify-backup` 子命令和菜单项，可通过统一维护入口校验备份包。
+- `update.sh` / `rollback.sh` 继续补强：成功状态写入 `runtime/`，回滚前镜像留痕，并支持 `RUN_SMOKE_AFTER_ROLLBACK=1` 回滚后自动体检。
 - README 已整理为当前状态版，旧流水账迁移到文档索引中继续保留。
 
 ## 已完成能力

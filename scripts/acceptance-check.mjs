@@ -164,6 +164,22 @@ check('shell remote smoke uses safe temp file names', () => {
   assert(script.includes('${safe_name}.json') && script.includes('${safe_name}.err'), 'remote smoke temp files must use sanitized names');
 });
 
+check('maintenance scripts expose recovery guardrails', () => {
+  const backup = read('scripts/backup.sh');
+  const restore = read('scripts/restore.sh');
+  const maintenance = read('scripts/maintenance.sh');
+  const update = read('scripts/update.sh');
+  const rollback = read('scripts/rollback.sh');
+
+  assert(!/tar -tzf "\$BACKUP_FILE"\s*\|\s*grep -q/.test(backup), 'backup.sh should not use tar | grep -q with pipefail');
+  assert(!/tar -tzf "\$BACKUP_FILE"\s*\|\s*grep -q/.test(restore), 'restore.sh should not use tar | grep -q with pipefail');
+  assert(restore.includes('RESTORE_VERIFY_ONLY'), 'restore.sh must support RESTORE_VERIFY_ONLY');
+  assert(maintenance.includes('verify-backup'), 'maintenance.sh must expose verify-backup');
+  assert(update.includes('runtime/last_successful_update'), 'update.sh must record successful update metadata');
+  assert(rollback.includes('runtime/last_image_before_rollback'), 'rollback.sh must record pre-rollback metadata');
+  assert(rollback.includes('RUN_SMOKE_AFTER_ROLLBACK'), 'rollback.sh must support optional post-rollback smoke test');
+});
+
 if (failures.length) {
   console.error('\nAcceptance check failed:');
   for (const failure of failures) {

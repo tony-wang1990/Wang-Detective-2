@@ -7,6 +7,7 @@ set -Eeuo pipefail
 APP_DIR="${APP_DIR:-/app/king-detective}"
 ROLLBACK_IMAGE="${1:-${ROLLBACK_IMAGE:-}}"
 BACKUP_BEFORE_ROLLBACK="${BACKUP_BEFORE_ROLLBACK:-1}"
+RUN_SMOKE_AFTER_ROLLBACK="${RUN_SMOKE_AFTER_ROLLBACK:-0}"
 HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-900}"
 
 log() {
@@ -50,7 +51,7 @@ set_env_value() {
 }
 
 wait_for_health() {
-    port="$(env_value SERVER_PORT)"
+    port="${SERVER_PORT:-$(env_value SERVER_PORT)}"
     port="${port:-9527}"
     health_url="http://127.0.0.1:${port}/actuator/health"
     started_at="$(date +%s)"
@@ -88,6 +89,16 @@ log "=== Wang-Detective 回滚 ==="
 log "应用目录: $APP_DIR"
 log "目标镜像: $ROLLBACK_IMAGE"
 
+mkdir -p runtime
+current_image="$(docker inspect --format '{{.Config.Image}}' king-detective 2>/dev/null || true)"
+current_image_id="$(docker inspect --format '{{.Image}}' king-detective 2>/dev/null || true)"
+{
+    echo "time=$(date '+%Y-%m-%d %H:%M:%S')"
+    echo "image=$current_image"
+    echo "image_id=$current_image_id"
+    echo "rollback_target=$ROLLBACK_IMAGE"
+} > runtime/last_image_before_rollback
+
 if [ "$BACKUP_BEFORE_ROLLBACK" = "1" ] && [ -x scripts/backup.sh ]; then
     log "回滚前备份..."
     scripts/backup.sh
@@ -110,4 +121,19 @@ wait_for_health
 
 revision="$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' king-detective 2>/dev/null || true)"
 image_id="$(docker inspect --format '{{.Image}}' king-detective 2>/dev/null || true)"
+{
+    echo "time=$(date '+%Y-%m-%d %H:%M:%S')"
+    echo "target_image=$ROLLBACK_IMAGE"
+    echo "revision=${revision:-unknown}"
+    echo "image_id=${image_id:-unknown}"
+    echo "previous_image=$current_image"
+    echo "previous_image_id=$current_image_id"
+} > runtime/last_successful_rollback
 log "回滚完成。revision=${revision:-unknown} image_id=${image_id:-unknown}"
+
+if [ "$RUN_SMOKE_AFTER_ROLLBACK" = "1" ] && [ -x scripts/server-smoke-test.sh ]; then
+    log "执行冒烟检查..."
+    scripts/server-smoke-test.sh
+else
+    warn "未自动执行完整冒烟检查；需要时运行: bash scripts/server-smoke-test.sh"
+fi

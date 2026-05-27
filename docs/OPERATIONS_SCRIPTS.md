@@ -120,6 +120,13 @@ KING_DETECTIVE_IMAGE=ghcr.io/tony-wang1990/wang-detective:main bash scripts/upda
 RUN_SMOKE_AFTER_UPDATE=1 bash scripts/update.sh
 ```
 
+更新成功后会写入：
+
+```text
+runtime/last_successful_update
+runtime/last_image_before_update
+```
+
 ## 回滚
 
 回滚到指定镜像：
@@ -136,6 +143,19 @@ runtime/last_image_before_update
 ```
 
 没有传入镜像时，`rollback.sh` 会优先尝试读取这个文件。
+
+回滚后如需自动跑体检：
+
+```bash
+RUN_SMOKE_AFTER_ROLLBACK=1 bash scripts/rollback.sh ghcr.io/tony-wang1990/wang-detective:main
+```
+
+回滚成功后会写入：
+
+```text
+runtime/last_successful_rollback
+runtime/last_image_before_rollback
+```
 
 ## 支持包
 
