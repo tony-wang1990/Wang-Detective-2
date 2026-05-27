@@ -852,13 +852,6 @@ final class OpsCenterSupport {
     }
 
     static String escapeMarkdown(String text) {
-        if (text == null) {
-            return "";
-        }
-        return text.replace("\\", "\\\\")
-                .replace("_", "\\_")
-                .replace("*", "\\*")
-                .replace("[", "\\[")
-                .replace("`", "\\`");
+        return text == null ? "" : text;
     }
 }

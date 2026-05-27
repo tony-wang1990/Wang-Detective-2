@@ -312,6 +312,13 @@ check('telegram callback buttons map to handlers', () => {
   assert(result.status === 0, `verify-telegram-callbacks exited ${result.status}`);
 });
 
+check('telegram callback text uses centralized MarkdownV2 formatting', () => {
+  const baseHandler = read('src/main/java/com/tony/kingdetective/telegram/handler/AbstractCallbackHandler.java');
+  const opsCenter = read('src/main/java/com/tony/kingdetective/telegram/handler/impl/OpsCenterHandler.java');
+  assert(baseHandler.includes('MarkdownFormatter.formatMarkdown(text)'), 'AbstractCallbackHandler must format callback text centrally');
+  assert(!opsCenter.includes('return text.replace("\\\\", "\\\\\\\\")'), 'OpsCenterSupport should not keep a partial Markdown escape implementation');
+});
+
 check('shell remote smoke uses safe temp file names', () => {
   const script = read('scripts/remote-smoke-test.sh');
   assert(script.includes('safe_name='), 'scripts/remote-smoke-test.sh must sanitize check names before using them as temp filenames');

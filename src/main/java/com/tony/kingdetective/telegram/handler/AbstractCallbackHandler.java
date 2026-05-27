@@ -3,6 +3,7 @@ package com.tony.kingdetective.telegram.handler;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import com.tony.kingdetective.telegram.utils.MarkdownFormatter;
 
 import static java.lang.Math.toIntExact;
 
@@ -25,7 +26,7 @@ public abstract class AbstractCallbackHandler implements CallbackHandler {
         return EditMessageText.builder()
                 .chatId(callbackQuery.getMessage().getChatId())
                 .messageId(toIntExact(callbackQuery.getMessage().getMessageId()))
-                .text(text)
+                .text(MarkdownFormatter.formatMarkdown(text))
                 .parseMode("MarkdownV2")  // 使用 MarkdownV2，需配合 MarkdownFormatter 转义
                 .replyMarkup(markup)
                 .build();
