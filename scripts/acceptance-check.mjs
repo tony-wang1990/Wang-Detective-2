@@ -158,6 +158,12 @@ check('remote smoke test script parses', () => {
   assert(result.status === 0, `remote-smoke-test syntax check exited ${result.status}`);
 });
 
+check('shell remote smoke uses safe temp file names', () => {
+  const script = read('scripts/remote-smoke-test.sh');
+  assert(script.includes('safe_name='), 'scripts/remote-smoke-test.sh must sanitize check names before using them as temp filenames');
+  assert(script.includes('${safe_name}.json') && script.includes('${safe_name}.err'), 'remote smoke temp files must use sanitized names');
+});
+
 if (failures.length) {
   console.error('\nAcceptance check failed:');
   for (const failure of failures) {

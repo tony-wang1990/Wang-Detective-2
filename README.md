@@ -96,6 +96,7 @@ docker compose up -d --force-recreate
 - 远程 smoke 从 30 项扩展到 40 项，新增系统配置读取、审计搜索/导出、最近日志、SSH 主机库/会话/模板、备份计划、救援脚本等只读接口验收；上一轮 `https://oci.199060.xyz` 线上实测 39/39 通过，最近日志接口待部署后复验。
 - 修复 shell 版远程 smoke 的临时文件命名问题，Vue 路由名中的 `/` 和 `:` 会被安全转换，不再误报 `No such file or directory`。
 - 服务器脚本继续收口：`server-smoke-test.sh` 新增脚本语法和最近日志接口检查；`backup.sh` 创建后校验备份包；`support-bundle.sh` 对文件日志尾部也执行脱敏并校验支持包可读。
+- 发布前静态验收新增 smoke 临时文件命名检查，防止路由名里的 `/`、`:` 再次导致 shell 版远程验收误报。
 - README 已整理为当前状态版，旧流水账迁移到文档索引中继续保留。
 
 ## 已完成能力
