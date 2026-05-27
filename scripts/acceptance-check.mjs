@@ -181,6 +181,17 @@ check('remote smoke test script parses', () => {
   assert(result.status === 0, `remote-smoke-test syntax check exited ${result.status}`);
 });
 
+check('install and server smoke include remote smoke helpers', () => {
+  const install = read('scripts/install.sh');
+  const serverSmoke = read('scripts/server-smoke-test.sh');
+  const helpers = ['remote-smoke-test.sh', 'remote-smoke-test.mjs'];
+  for (const helper of helpers) {
+    assert(install.includes(helper), `install.sh must sync ${helper}`);
+  }
+  assert(serverSmoke.includes('EXPECTED_NODE_HELPERS'), 'server-smoke-test.sh must declare Node helper checks');
+  assert(serverSmoke.includes('remote-smoke-test.mjs'), 'server-smoke-test.sh must check remote-smoke-test.mjs presence');
+});
+
 check('telegram callback buttons map to handlers', () => {
   const result = spawnSync(process.execPath, ['scripts/verify-telegram-callbacks.mjs'], {
     cwd: root,
