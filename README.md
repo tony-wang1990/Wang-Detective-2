@@ -59,7 +59,7 @@ docker compose up -d --force-recreate
 | Telegram Bot | 88% | 运维中心、诊断、任务、日志、风险、备份、版本更新、实例操作向导、多 Chat ID 和实例状态推送已接入；按钮回调到处理器的静态映射已纳入验收 |
 | 备份恢复 | 92% | Web 备份统一为 `backup.sh` 的 tar.gz 格式，定时自动备份和恢复计划已接入，Bucket 为空时自动退回本地备份；本地备份和计划接口已纳入线上 smoke；备份包创建后会立即校验 tar 和核心目录；恢复脚本和维护入口均支持只校验不覆盖 |
 | 救援中心 | 72% | 轻量自救、boot volume 拆卷救援、netboot.xyz 实验区已上线；概览、轻量自救脚本和 netboot 脚本只读接口已通过线上 smoke |
-| CI/测试 | 84% | GitHub Actions 已包含 Java 21、Node 20、前端构建、Maven 构建、脚本换行/语法、前后端接口映射、Telegram 回调映射、乱码/原生弹窗扫描和 40 项远程 smoke 检查；自动 Release 创建前也会跑发布验证 |
+| CI/测试 | 85% | GitHub Actions 已包含 Java 21、Node 20、前端构建、Maven 构建、脚本换行/语法、前后端接口映射、Telegram 回调映射、乱码/原生弹窗扫描、README 断链检查和 40 项远程 smoke 检查；自动 Release 创建前也会跑发布验证 |
 
 ## 最近完成
 
@@ -107,6 +107,7 @@ docker compose up -d --force-recreate
 - 一键安装脚本同步运维脚本时会同时下发 shell 版和 Node 版远程 smoke，方便服务器有 Node 时使用自动 fetch/curl 回退版本。
 - 服务器体检脚本会检查 Node 版远程 smoke 是否同步；服务器没有 Node 时会提示跳过语法检查，不影响 shell 版验收。
 - 本地 acceptance 已增加安装脚本和体检脚本同步守卫，避免远程 smoke 辅助脚本后续漏发。
+- 本地 acceptance 已增加 README 本地链接和截图断链检查，避免首页展示图或文档索引失效。
 - README 已整理为当前状态版，旧流水账迁移到文档索引中继续保留。
 
 ## 已完成能力

@@ -140,6 +140,15 @@ check('key text files do not contain common mojibake markers', () => {
   assert(!bad.length, `common mojibake marker found in: ${bad.join(', ')}`);
 });
 
+check('README local links and images exist', () => {
+  const readme = read('README.md');
+  const links = [...readme.matchAll(/!?\[[^\]]*]\(([^)]+)\)/g)]
+    .map((match) => match[1].trim().split('#')[0])
+    .filter((target) => target && !/^[a-z][a-z0-9+.-]*:/i.test(target) && !target.startsWith('#'));
+  const missing = links.filter((target) => !fs.existsSync(file(decodeURIComponent(target))));
+  assert(!missing.length, `README local links/images missing: ${missing.join(', ')}`);
+});
+
 check('frontend does not use native browser dialogs', () => {
   const targets = walk('frontend/src', (full) => full.endsWith('.vue') || full.endsWith('.ts'));
   const nativeDialog = /window\.(alert|confirm|prompt)|\b(alert|confirm|prompt)\(/;
