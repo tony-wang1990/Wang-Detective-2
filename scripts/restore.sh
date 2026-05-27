@@ -9,6 +9,7 @@ BACKUP_FILE="${1:-${BACKUP_FILE:-}}"
 RESTORE_CONFIRM="${RESTORE_CONFIRM:-}"
 SKIP_PRE_RESTORE_BACKUP="${SKIP_PRE_RESTORE_BACKUP:-0}"
 START_AFTER_RESTORE="${START_AFTER_RESTORE:-1}"
+RESTORE_VERIFY_ONLY="${RESTORE_VERIFY_ONLY:-0}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 WORK_DIR="${TMPDIR:-/tmp}/wang-detective-restore-$TIMESTAMP.$$"
 
@@ -25,6 +26,12 @@ die() {
     exit 1
 }
 
+cleanup() {
+    rm -rf "$WORK_DIR"
+}
+
+trap cleanup EXIT
+
 compose() {
     if docker compose version >/dev/null 2>&1; then
         docker compose "$@"
@@ -32,6 +39,28 @@ compose() {
         docker-compose "$@"
     else
         return 127
+    fi
+}
+
+verify_backup() {
+    log "校验备份包..."
+    tar -tzf "$BACKUP_FILE" >/dev/null || die "备份包校验失败，tar 无法读取: $BACKUP_FILE"
+    if tar -tzf "$BACKUP_FILE" | grep -E '(^/|(^|/)\.\.(/|$))' >/dev/null; then
+        die "备份包包含不安全路径，拒绝恢复"
+    fi
+    tar -tzf "$BACKUP_FILE" | grep -q '^payload/' || die "备份包格式不正确，缺少 payload 目录"
+    tar -tzf "$BACKUP_FILE" | grep -q '^meta/backup-info.txt$' || die "备份包格式不正确，缺少 meta/backup-info.txt"
+
+    if [ -f "$BACKUP_FILE.sha256" ]; then
+        if command -v sha256sum >/dev/null 2>&1; then
+            (cd "$(dirname "$BACKUP_FILE")" && sha256sum -c "$(basename "$BACKUP_FILE.sha256")") >/dev/null \
+                || die "sha256 校验失败: $BACKUP_FILE.sha256"
+            log "sha256 校验通过"
+        else
+            warn "发现 sha256 文件但当前系统缺少 sha256sum，已跳过哈希校验"
+        fi
+    else
+        warn "未发现 sha256 文件，仅完成 tar 结构校验"
     fi
 }
 
@@ -45,8 +74,11 @@ log "=== Wang-Detective 恢复 ==="
 log "应用目录: $APP_DIR"
 log "备份文件: $BACKUP_FILE"
 
-if tar -tzf "$BACKUP_FILE" | grep -E '(^/|(^|/)\.\.(/|$))' >/dev/null; then
-    die "备份包包含不安全路径，拒绝恢复"
+verify_backup
+
+if [ "$RESTORE_VERIFY_ONLY" = "1" ]; then
+    log "RESTORE_VERIFY_ONLY=1，仅校验备份包，不执行恢复。"
+    exit 0
 fi
 
 if [ "$RESTORE_CONFIRM" != "YES" ]; then
@@ -90,8 +122,6 @@ fi
 
 chmod 600 "$APP_DIR/.env" 2>/dev/null || true
 chmod +x "$APP_DIR"/scripts/*.sh 2>/dev/null || true
-
-rm -rf "$WORK_DIR"
 
 if [ "$START_AFTER_RESTORE" = "1" ]; then
     log "启动服务..."

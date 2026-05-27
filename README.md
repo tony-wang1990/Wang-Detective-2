@@ -57,7 +57,7 @@ docker compose up -d --force-recreate
 | OCI 核心管理 | 85% | 配置、任务、实例详情、实例动作、网络、安全规则、引导卷等入口已接入真实后端，线上账号已完成非破坏性接口验收 |
 | Web SSH/SFTP | 89% | 主机库、主机复制/删除/批量导入、Web SSH、命令模板、危险命令确认、端口转发命令生成、会话列表、断线重连、resize、SFTP 基础文件操作和上传/下载进度反馈已完成；主机库/会话/模板只读接口已纳入线上 smoke |
 | Telegram Bot | 86% | 运维中心、诊断、任务、日志、风险、备份、版本更新、实例操作向导、多 Chat ID 和实例状态推送已接入 |
-| 备份恢复 | 89% | Web 备份统一为 `backup.sh` 的 tar.gz 格式，定时自动备份和恢复计划已接入，Bucket 为空时自动退回本地备份；本地备份和计划接口已纳入线上 smoke；备份包创建后会立即校验 tar 和核心目录 |
+| 备份恢复 | 90% | Web 备份统一为 `backup.sh` 的 tar.gz 格式，定时自动备份和恢复计划已接入，Bucket 为空时自动退回本地备份；本地备份和计划接口已纳入线上 smoke；备份包创建后会立即校验 tar 和核心目录；恢复脚本支持只校验不覆盖 |
 | 救援中心 | 72% | 轻量自救、boot volume 拆卷救援、netboot.xyz 实验区已上线；概览、轻量自救脚本和 netboot 脚本只读接口已通过线上 smoke |
 | CI/测试 | 75% | GitHub Actions 已包含 Java 21、Node 20、前端构建、Maven 构建、脚本换行/语法、前后端接口映射和 40 项远程 smoke 检查 |
 
@@ -97,6 +97,7 @@ docker compose up -d --force-recreate
 - 修复 shell 版远程 smoke 的临时文件命名问题，Vue 路由名中的 `/` 和 `:` 会被安全转换，不再误报 `No such file or directory`。
 - 服务器脚本继续收口：`server-smoke-test.sh` 新增脚本语法和最近日志接口检查；`backup.sh` 创建后校验备份包；`support-bundle.sh` 对文件日志尾部也执行脱敏并校验支持包可读。
 - 发布前静态验收新增 smoke 临时文件命名检查，防止路由名里的 `/`、`:` 再次导致 shell 版远程验收误报。
+- `restore.sh` 新增 `RESTORE_VERIFY_ONLY=1` 安全校验模式，可先检查备份包 tar、payload/meta 结构和 sha256，再决定是否真正恢复。
 - README 已整理为当前状态版，旧流水账迁移到文档索引中继续保留。
 
 ## 已完成能力

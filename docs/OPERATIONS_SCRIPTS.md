@@ -72,6 +72,12 @@ RETENTION_DAYS=30 bash scripts/backup.sh
 
 恢复会覆盖当前 `.env`、配置、数据库、keys 和 scripts。脚本会先尝试创建恢复前备份，并把旧文件移动到 `.restore-archive-*`。
 
+先只校验备份包，不恢复：
+
+```bash
+RESTORE_VERIFY_ONLY=1 bash scripts/restore.sh /app/king-detective/backups/wang-detective-backup-YYYYmmdd-HHMMSS.tar.gz
+```
+
 ```bash
 cd /app/king-detective
 bash scripts/restore.sh /app/king-detective/backups/wang-detective-backup-YYYYmmdd-HHMMSS.tar.gz
