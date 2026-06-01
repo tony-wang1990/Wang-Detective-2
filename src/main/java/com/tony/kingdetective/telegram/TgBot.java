@@ -17,6 +17,7 @@ import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -774,7 +775,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
                     if (response != null) {
                         log.debug("Executing response from handler: responseType={}", response.getClass().getSimpleName());
-                        telegramClient.execute(response);
+                        executeCallbackResponse(response, callbackData);
                         log.info("Successfully executed callback response: callbackData={}", callbackData);
                     } else {
                         log.warn("Handler returned null response: handler={}, callbackData={}", 
@@ -802,6 +803,42 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
                 }
             }
         });
+    }
+
+    private void executeCallbackResponse(BotApiMethod<? extends Serializable> response, String callbackData) throws TelegramApiException {
+        try {
+            telegramClient.execute(response);
+        } catch (TelegramApiException e) {
+            if (isMarkdownParseError(e) && retryCallbackResponseAsPlainText(response, callbackData)) {
+                return;
+            }
+            throw e;
+        }
+    }
+
+    private boolean retryCallbackResponseAsPlainText(BotApiMethod<? extends Serializable> response, String callbackData) {
+        try {
+            if (response instanceof EditMessageText editMessageText) {
+                editMessageText.setParseMode(null);
+                telegramClient.execute(editMessageText);
+                log.warn("Retried callback response as plain text after Markdown parse failure: callbackData={}", callbackData);
+                return true;
+            }
+            if (response instanceof SendMessage sendMessage) {
+                sendMessage.setParseMode(null);
+                telegramClient.execute(sendMessage);
+                log.warn("Retried callback send message as plain text after Markdown parse failure: callbackData={}", callbackData);
+                return true;
+            }
+        } catch (Exception retryError) {
+            log.error("Retrying callback response as plain text failed: callbackData={}", callbackData, retryError);
+        }
+        return false;
+    }
+
+    private boolean isMarkdownParseError(TelegramApiException e) {
+        String message = e.getMessage();
+        return message != null && message.contains("can't parse entities");
     }
 
     /**

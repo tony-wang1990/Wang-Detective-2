@@ -315,8 +315,18 @@ check('telegram callback buttons map to handlers', () => {
 check('telegram callback text uses centralized MarkdownV2 formatting', () => {
   const baseHandler = read('src/main/java/com/tony/kingdetective/telegram/handler/AbstractCallbackHandler.java');
   const opsCenter = read('src/main/java/com/tony/kingdetective/telegram/handler/impl/OpsCenterHandler.java');
+  const tgBot = read('src/main/java/com/tony/kingdetective/telegram/TgBot.java');
   assert(baseHandler.includes('MarkdownFormatter.formatMarkdown(text)'), 'AbstractCallbackHandler must format callback text centrally');
   assert(!opsCenter.includes('return text.replace("\\\\", "\\\\\\\\")'), 'OpsCenterSupport should not keep a partial Markdown escape implementation');
+  assert(tgBot.includes('executeCallbackResponse(response, callbackData)'), 'TgBot must execute callback responses through the safe Markdown fallback');
+  assert(tgBot.includes('retryCallbackResponseAsPlainText'), 'TgBot must retry callback responses as plain text when Telegram rejects MarkdownV2');
+});
+
+check('create task Telegram noise is suppressed until success', () => {
+  const ociService = read('src/main/java/com/tony/kingdetective/service/impl/OciServiceImpl.java');
+  assert(ociService.includes('logCreateTaskNotificationSuppressed(beginCreateMsg)'), 'create task start message should be logged instead of pushed to Telegram');
+  assert(ociService.includes('sysService.sendMessage(ipMsg.toString())'), 'create task success IP notification must still be pushed to Telegram');
+  assert(!ociService.includes('sysService.sendMessage(String.format("【开机任务】'), 'create task progress/failure loop messages should not push to Telegram');
 });
 
 check('shell remote smoke uses safe temp file names', () => {

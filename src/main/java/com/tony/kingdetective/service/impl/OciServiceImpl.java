@@ -256,7 +256,7 @@ public class OciServiceImpl implements IOciService {
                 params.getCreateNumbers(),
                 params.getRootPassword());
 
-        sysService.sendMessage(beginCreateMsg);
+        logCreateTaskNotificationSuppressed(beginCreateMsg);
     }
 
     @Override
@@ -1027,7 +1027,7 @@ public class OciServiceImpl implements IOciService {
                 log.error("【开机任务】用户:[{}],区域:[{}],系统架构:[{}],开机数量:[{}] 开机失败,可能的原因:(新生成的API暂未生效|账号已无权|账号异常或受限),请自行登录官方控制台检查。",
                         sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                         sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers());
-                sysService.sendMessage(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 开机失败,可能的原因:(新生成的API暂未生效|账号已无权|账号异常或受限),请自行登录官方控制台检查。",
+                logCreateTaskNotificationSuppressed(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 开机失败,可能的原因:(新生成的API暂未生效|账号已无权|账号异常或受限),请自行登录官方控制台检查。",
                         sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                         sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers()));
             }
@@ -1037,7 +1037,7 @@ public class OciServiceImpl implements IOciService {
                 log.error("【开机任务】用户:[{}],区域:[{}],系统架构:[{}],开机数量:[{}] 因无有效公网 VCN 而终止任务...",
                         sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                         sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers());
-                sysService.sendMessage(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 无有效公网 VCN,且无法再创建 VCN,请删除无效的私网 VCN",
+                logCreateTaskNotificationSuppressed(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 无有效公网 VCN,且无法再创建 VCN,请删除无效的私网 VCN",
                         sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                         sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers()));
             }
@@ -1047,7 +1047,7 @@ public class OciServiceImpl implements IOciService {
                 log.error("【开机任务】用户:[{}],区域:[{}],系统架构:[{}],开机数量:[{}] 因不支持 CPU 架构:[{}] 或配额不足而终止任务...",
                         sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                         sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers(), sysUserDTO.getArchitecture());
-                sysService.sendMessage(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 因不支持 CPU 架构:[%s] 或配额不足而终止任务",
+                logCreateTaskNotificationSuppressed(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 因不支持 CPU 架构:[%s] 或配额不足而终止任务",
                         sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                         sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers(), sysUserDTO.getArchitecture()));
             }
@@ -1055,7 +1055,7 @@ public class OciServiceImpl implements IOciService {
             if (sysUserDTO.getCreateNumbers() == outCounts) {
 //                stopAndRemoveTask(sysUserDTO, createTaskService);
 //                log.error("【开机任务】用户:[{}],区域:[{}],系统架构:[{}],开机数量:[{}] 因超额而终止任务...",
-                sysService.sendMessage(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 官方提示配额已超过限制,但任务未终止",
+                logCreateTaskNotificationSuppressed(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 官方提示配额已超过限制,但任务未终止",
                         sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                         sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers()));
             }
@@ -1115,7 +1115,7 @@ public class OciServiceImpl implements IOciService {
                     log.error("【开机任务】用户:[{}],区域:[{}],系统架构:[{}],开机数量:[{}] 开机失败,可能的原因:(新生成的API暂未生效|账号已无权|账号异常或受限),请自行登录官方控制台检查。",
                             sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                             sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers());
-                    sysService.sendMessage(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 开机失败,可能的原因:(新生成的API暂未生效|账号已无权|账号异常或受限),请自行登录官方控制台检查。",
+                    logCreateTaskNotificationSuppressed(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] 开机失败,可能的原因:(新生成的API暂未生效|账号已无权|账号异常或受限),请自行登录官方控制台检查。",
                             sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                             sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers()));
                 }
@@ -1123,11 +1123,6 @@ public class OciServiceImpl implements IOciService {
                 log.error("【开机任务】用户:[{}],区域:[{}],系统架构:[{}],开机数量:[{}] 发生了异常:{}",
                         sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
                         sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers(), e.getLocalizedMessage());
-//            stopAndRemoveTask(sysUserDTO, createTaskService);
-//            sysService.sendMessage(String.format("【开机任务】用户:[%s],区域:[%s],系统架构:[%s],开机数量:[%s] " +
-//                            "发生了异常但并未停止枪机任务,可能是网络响应超时等原因,具体情况自行查看日志",
-//                    sysUserDTO.getUsername(), sysUserDTO.getOciCfg().getRegion(),
-//                    sysUserDTO.getArchitecture(), sysUserDTO.getCreateNumbers()));
             }
         } finally {
             // 确保任务执行完毕后清除运行标志
@@ -1140,6 +1135,10 @@ public class OciServiceImpl implements IOciService {
         stopTask(CommonUtils.CREATE_TASK_PREFIX + sysUserDTO.getTaskId());
         createTaskService.remove(new LambdaQueryWrapper<OciCreateTask>().eq(OciCreateTask::getId, sysUserDTO.getTaskId()));
         RUNNING_TASKS.remove(CommonUtils.CREATE_TASK_PREFIX + sysUserDTO.getTaskId());
+    }
+
+    private static void logCreateTaskNotificationSuppressed(String message) {
+        log.info("Create task progress TG notification suppressed. {}", message);
     }
 
     public void execChange(ChangeIpParams params,
