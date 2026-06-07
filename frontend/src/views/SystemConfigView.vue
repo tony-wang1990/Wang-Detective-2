@@ -150,7 +150,22 @@ async function saveCfg() {
   saving.value = true;
   notice.value = '';
   try {
-    const payload: SystemConfig = { ...cfg };
+    const payload = {
+      dingToken: cfg.dingToken,
+      dingSecret: cfg.dingSecret,
+      tgChatId: cfg.tgChatId,
+      tgBotToken: cfg.tgBotToken,
+      enableMfa: cfg.enableMfa,
+      enableDailyBroadcast: cfg.enableDailyBroadcast,
+      dailyBroadcastCron: cfg.dailyBroadcastCron,
+      enableVersionInform: cfg.enableVersionInform,
+      gjAiApi: cfg.gjAiApi,
+      bootBroadcastToken: cfg.bootBroadcastToken,
+      enableGoogleLogin: cfg.enableGoogleLogin,
+      googleClientId: cfg.googleClientId,
+      allowedEmails: cfg.allowedEmails,
+      enableKeepAlive: cfg.enableKeepAlive
+    };
     const res = await apiPost<void>('/sys/updateSysCfg', payload);
     notice.value = res.msg || '保存成功';
     await loadCfg();
@@ -204,8 +219,24 @@ async function checkMfa() {
 }
 
 async function updateAdminCredential() {
-  savingCredential.value = true;
   notice.value = '';
+  if (!credentialForm.currentPassword) {
+    notice.value = '请输入当前密码';
+    return;
+  }
+  if (!credentialForm.newAccount.trim()) {
+    notice.value = '请输入新登录账号';
+    return;
+  }
+  if (!credentialForm.newPassword || credentialForm.newPassword.length < 8) {
+    notice.value = '新密码至少需要 8 位';
+    return;
+  }
+  if (credentialForm.newPassword !== credentialForm.confirmPassword) {
+    notice.value = '两次输入的新密码不一致';
+    return;
+  }
+  savingCredential.value = true;
   try {
     const res = await apiPost<void>('/sys/updateAdminCredential', {
       currentPassword: credentialForm.currentPassword,
@@ -279,7 +310,7 @@ onMounted(() => {
         <div class="wd-form-grid">
           <label>
             <span>Telegram Bot Token</span>
-            <input v-model="cfg.tgBotToken" autocomplete="off" placeholder="请输入 Telegram Bot Token" />
+            <input v-model="cfg.tgBotToken" autocomplete="new-password" type="password" placeholder="请输入 Telegram Bot Token" />
           </label>
           <label>
             <span>Telegram 个人 ID / Chat ID</span>
@@ -287,15 +318,15 @@ onMounted(() => {
           </label>
           <label>
             <span>钉钉 Access Token</span>
-            <input v-model="cfg.dingToken" autocomplete="off" placeholder="请输入钉钉 Access Token" />
+            <input v-model="cfg.dingToken" autocomplete="new-password" type="password" placeholder="请输入钉钉 Access Token" />
           </label>
           <label>
             <span>钉钉 Secret</span>
-            <input v-model="cfg.dingSecret" autocomplete="off" placeholder="请输入钉钉 Secret" />
+            <input v-model="cfg.dingSecret" autocomplete="new-password" type="password" placeholder="请输入钉钉 Secret" />
           </label>
           <label class="wide">
             <span>开机播报 Token</span>
-            <input v-model="cfg.bootBroadcastToken" autocomplete="off" placeholder="可选：用于开机播报回调" />
+            <input v-model="cfg.bootBroadcastToken" autocomplete="new-password" type="password" placeholder="可选：用于开机播报回调" />
           </label>
         </div>
       </div>
@@ -343,7 +374,7 @@ onMounted(() => {
           </label>
           <label class="wide">
             <span>AI API Key（保留现有能力，不做体验升级）</span>
-            <input v-model="cfg.gjAiApi" autocomplete="off" placeholder="可选：硅基流动 / OpenAI 兼容 Key" />
+            <input v-model="cfg.gjAiApi" autocomplete="new-password" type="password" placeholder="可选：硅基流动 / OpenAI 兼容 Key" />
           </label>
         </div>
       </div>
@@ -357,7 +388,7 @@ onMounted(() => {
           </label>
           <label>
             <span>MFA Secret</span>
-            <input :value="cfg.mfaSecret || '未生成或未启用'" readonly />
+            <input :value="cfg.mfaSecret || '未生成或未启用'" readonly type="password" />
           </label>
           <label class="wd-switch-row">
             <input v-model="cfg.enableGoogleLogin" type="checkbox" />

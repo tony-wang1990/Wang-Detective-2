@@ -135,7 +135,7 @@ public class SysCfgController {
     }
 
     @PostMapping(path = "/recover")
-    public ResponseData<Void> recover(@Validated RecoverParams params) {
+    public ResponseData<Void> recover(@Validated @ModelAttribute RecoverParams params) {
         sysService.recover(params);
         return ResponseData.successData("恢复数据成功");
     }

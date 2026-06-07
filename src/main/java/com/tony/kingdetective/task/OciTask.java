@@ -96,7 +96,6 @@ public class OciTask implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        TEMP_MAP.put("password", adminCredentialService.getPassword());
         startTgBog();
         updateUserInDb();
         cleanLogTask();

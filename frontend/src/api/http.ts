@@ -56,6 +56,7 @@ export type TransferProgress = {
 };
 
 let activeRequests = 0;
+let redirectingToLogin = false;
 
 const DEFAULT_TIMEOUT_MS = 45000;
 const HEALTH_TIMEOUT_MS = 12000;
@@ -82,6 +83,17 @@ export function notifyGlobal(message: string, kind: ToastKind = 'info') {
 function authHeaders(): HeadersInit {
   const token = sessionStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function handleUnauthorized() {
+  sessionStorage.clear();
+  if (!redirectingToLogin) {
+    redirectingToLogin = true;
+    notifyGlobal('登录已过期，请重新登录', 'error');
+  }
+  if (!window.location.pathname.includes('/login')) {
+    window.location.replace('/login');
+  }
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
@@ -117,13 +129,7 @@ async function parseResponse<T>(response: Response, url: string): Promise<T> {
       ? (payload as { msg?: string; message?: string }).msg || (payload as { msg?: string; message?: string }).message
       : String(payload || '');
     if (response.status === 401) {
-      sessionStorage.clear();
-      notifyGlobal('登录已过期，请重新登录', 'error');
-      window.setTimeout(() => {
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
-        }
-      }, 600);
+      handleUnauthorized();
     }
     throw new Error(message || `${url} ${response.status}`);
   }
@@ -381,13 +387,7 @@ export function opsUploadWithProgress(
         return;
       }
       if (xhr.status === 401) {
-        sessionStorage.clear();
-        notifyGlobal('登录已过期，请重新登录', 'error');
-        window.setTimeout(() => {
-          if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
-          }
-        }, 600);
+        handleUnauthorized();
       }
       reject(new Error(payload?.msg || payload?.message || xhr.responseText || `upload ${xhr.status}`));
     };
@@ -424,7 +424,7 @@ export async function getHealth(): Promise<HealthData> {
   const done = beginNetwork('/actuator/health');
   try {
     const response = await fetchWithTimeout('/actuator/health', {
-      headers: authHeaders()
+      headers: {}
     }, HEALTH_TIMEOUT_MS);
     if (!response.ok) {
       throw new Error(`health ${response.status}`);

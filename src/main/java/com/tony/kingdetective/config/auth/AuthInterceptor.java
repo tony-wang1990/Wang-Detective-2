@@ -5,95 +5,73 @@ import com.tony.kingdetective.bean.entity.OciKv;
 import com.tony.kingdetective.exception.OciException;
 import com.tony.kingdetective.service.AdminCredentialService;
 import com.tony.kingdetective.service.IIpBlacklistService;
-import com.tony.kingdetective.service.ILoginAttemptService;
 import com.tony.kingdetective.service.IOciKvService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.util.Arrays;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
-/**
- * @author: Tony Wang
- * @date: 2024/3/30 18:03
- */
 @Slf4j
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
-    
+
     private static final String DEFENSE_MODE_KEY = "defense_mode_enabled";
+    private static final long DEFENSE_MODE_CACHE_MILLIS = 10_000L;
 
-    private final AdminCredentialService adminCredentialService;
-
-    public AuthInterceptor(AdminCredentialService adminCredentialService) {
-        this.adminCredentialService = adminCredentialService;
-    }
-
-    List<String> noTokenList = Arrays.asList(
+    private static final Set<String> PUBLIC_ENDPOINTS = Set.of(
             "/api/sys/login",
             "/api/sys/getEnableMfa",
             "/api/sys/googleLogin",
             "/api/sys/getGoogleClientId"
     );
 
-    // AI 聊天接口无需 Token（前端携带 Token 时也会正常通过鉴权，此处放行未登录访问的情况）
-    // fix: /chat/** 路径未加 /api 前缀，鉴权拦截器仅拦截 /api/**，故无需特殊处理
-    // 但保留此注释，提示后续维护者：若将 /chat 迁移到 /api/chat 需同步更新 noTokenList
+    private final AdminCredentialService adminCredentialService;
+    private volatile boolean defenseModeEnabledCache;
+    private volatile long defenseModeCacheExpiresAt;
 
+    public AuthInterceptor(AdminCredentialService adminCredentialService) {
+        this.adminCredentialService = adminCredentialService;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 放行 WebSocket 握手请求
         if ("GET".equalsIgnoreCase(request.getMethod()) && "websocket".equalsIgnoreCase(request.getHeader("Upgrade"))) {
             return true;
         }
-
-        // 放行预检请求（OPTIONS）
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            response.setStatus(HttpServletResponse.SC_OK); // 直接返回 200 状态码
+            response.setStatus(HttpServletResponse.SC_OK);
             return true;
         }
-        
-        // === 安全检查 ===
+
         String clientIp = getClientIp(request);
-        
-        // 1. 检查防御模式
         if (isDefenseModeEnabled()) {
             log.warn("Defense mode is enabled, blocking request from IP: {}", clientIp);
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.getWriter().write("{\"code\":403,\"msg\":\"Defense mode enabled. Access denied.\"}");
+            writeJson(response, HttpServletResponse.SC_FORBIDDEN, "{\"code\":403,\"msg\":\"防御模式已开启，访问被拒绝\"}");
             return false;
         }
-        
-        // 2. 检查IP黑名单
+
         IIpBlacklistService blacklistService = SpringUtil.getBean(IIpBlacklistService.class);
         if (blacklistService.isBlacklisted(clientIp)) {
             log.warn("IP {} is blacklisted", clientIp);
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.getWriter().write("{\"code\":403,\"msg\":\"IP blocked\"}");
+            writeJson(response, HttpServletResponse.SC_FORBIDDEN, "{\"code\":403,\"msg\":\"当前 IP 已被拦截\"}");
             return false;
         }
 
-        String authorizationHeader = request.getHeader("Authorization");
-        if (request.getRequestURI().contains("/api") && !noTokenList.contains(request.getRequestURI())) {
+        if (requiresToken(request.getRequestURI())) {
+            String authorizationHeader = request.getHeader("Authorization");
             if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                String token = authorizationHeader.substring(7); // 去掉"Bearer "前缀
-                // 验证token（这里可以调用你的验证逻辑）
-                boolean isValid = validateToken(token);
-                if (isValid) {
-                    return true; // 继续处理请求
-                } else {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    throw new OciException(401, "无权限");
+                String token = authorizationHeader.substring(7);
+                if (adminCredentialService.verifyToken(token)) {
+                    return true;
                 }
-            } else {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                throw new OciException(401, "无权限");
             }
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            throw new OciException(401, "未授权，请重新登录");
         }
 
         return true;
@@ -109,27 +87,33 @@ public class AuthInterceptor implements HandlerInterceptor {
         HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
     }
 
-    private boolean validateToken(String token) {
-        return adminCredentialService.verifyToken(token);
+    private boolean requiresToken(String uri) {
+        if (uri == null) {
+            return false;
+        }
+        if (PUBLIC_ENDPOINTS.contains(uri)) {
+            return false;
+        }
+        return uri.startsWith("/api/") || uri.startsWith("/chat/");
     }
-    
-    /**
-     * Check if defense mode is enabled
-     */
+
     private boolean isDefenseModeEnabled() {
+        long now = System.currentTimeMillis();
+        if (now < defenseModeCacheExpiresAt) {
+            return defenseModeEnabledCache;
+        }
         try {
             IOciKvService kvService = SpringUtil.getBean(IOciKvService.class);
             OciKv defenseModeKv = kvService.getByKey(DEFENSE_MODE_KEY);
-            return defenseModeKv != null && "true".equals(defenseModeKv.getValue());
+            defenseModeEnabledCache = defenseModeKv != null && "true".equals(defenseModeKv.getValue());
+            defenseModeCacheExpiresAt = now + DEFENSE_MODE_CACHE_MILLIS;
+            return defenseModeEnabledCache;
         } catch (Exception e) {
             log.error("Failed to check defense mode", e);
             return false;
         }
     }
-    
-    /**
-     * Get client IP address
-     */
+
     private String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
@@ -138,10 +122,15 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
         }
-        // 处理多个IP的情况 (X-Forwarded-For可能包含多个IP)
         if (ip != null && ip.contains(",")) {
             ip = ip.split(",")[0].trim();
         }
         return ip;
+    }
+
+    private void writeJson(HttpServletResponse response, int status, String body) throws Exception {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -28,6 +28,11 @@ let memoryChart: EChartsType | null = null;
 let trafficChart: EChartsType | null = null;
 let metricsWs: WebSocket | null = null;
 let clockTimer: number | undefined;
+let metricsReconnectTimer: number | undefined;
+let metricsReconnectAttempts = 0;
+let uptimeBaseSeconds = 0;
+let uptimeBaseAt = Date.now();
+let metricsManualClose = false;
 
 echarts.use([PieChart, LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer]);
 
@@ -104,6 +109,15 @@ function markerHtml(count?: number) {
   return `<span>${count || 1}</span>`;
 }
 
+function escapeHtml(value?: string | number) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function renderMap() {
   if (!map) return;
   cityLayer?.clearLayers();
@@ -120,10 +134,10 @@ function renderMap() {
         iconAnchor: [17, 17]
       })
     }).bindPopup(`
-      <strong>${city.city || city.area || city.country || '未知区域'}</strong><br>
-      ${city.country || ''} ${city.area || ''}<br>
-      IP 数量：${city.count || 1}<br>
-      ${city.org || ''}
+      <strong>${escapeHtml(city.city || city.area || city.country || '未知区域')}</strong><br>
+      ${escapeHtml(city.country)} ${escapeHtml(city.area)}<br>
+      IP 数量：${escapeHtml(city.count || 1)}<br>
+      ${escapeHtml(city.org)}
     `);
     cityLayer.addLayer(marker);
   }
@@ -219,7 +233,7 @@ function updateCharts(metrics: MetricsMessage) {
 function tickClock() {
   nowText.value = new Date().toLocaleTimeString();
   if (health.value.uptimeSeconds != null) {
-    health.value.uptimeSeconds += 1;
+    health.value.uptimeSeconds = uptimeBaseSeconds + Math.floor((Date.now() - uptimeBaseAt) / 1000);
   }
 }
 
@@ -231,10 +245,28 @@ function resizeVisuals() {
 }
 
 function disconnectMetrics() {
+  metricsManualClose = true;
+  if (metricsReconnectTimer) {
+    window.clearTimeout(metricsReconnectTimer);
+    metricsReconnectTimer = undefined;
+  }
   if (metricsWs) {
     metricsWs.close();
     metricsWs = null;
   }
+}
+
+function scheduleMetricsReconnect() {
+  if (metricsReconnectTimer || !sessionStorage.getItem('token')) {
+    return;
+  }
+  const delay = Math.min(30000, 2000 * 2 ** metricsReconnectAttempts);
+  metricsReconnectAttempts += 1;
+  metricsStatus.value = `已断开，${Math.round(delay / 1000)} 秒后重连`;
+  metricsReconnectTimer = window.setTimeout(() => {
+    metricsReconnectTimer = undefined;
+    connectMetrics();
+  }, delay);
 }
 
 function connectMetrics() {
@@ -244,24 +276,34 @@ function connectMetrics() {
     return;
   }
   disconnectMetrics();
-  const url = `${window.location.origin.replace(/^http/, 'ws')}/metrics/${encodeURIComponent(token)}`;
-  metricsWs = new WebSocket(url);
+  const url = `${window.location.origin.replace(/^http/, 'ws')}/metrics?token=${encodeURIComponent(token)}`;
+  const ws = new WebSocket(url);
+  metricsWs = ws;
+  metricsManualClose = false;
   metricsStatus.value = '连接中';
-  metricsWs.onopen = () => {
+  ws.onopen = () => {
+    metricsReconnectAttempts = 0;
     metricsStatus.value = '实时推送中';
   };
-  metricsWs.onmessage = (event) => {
+  ws.onmessage = (event) => {
     try {
       updateCharts(JSON.parse(String(event.data || '{}')) as MetricsMessage);
     } catch {
       metricsStatus.value = '指标解析失败';
     }
   };
-  metricsWs.onerror = () => {
+  ws.onerror = () => {
     metricsStatus.value = '连接异常';
   };
-  metricsWs.onclose = () => {
+  ws.onclose = () => {
+    if (metricsWs !== ws) {
+      return;
+    }
+    metricsWs = null;
     metricsStatus.value = '已断开';
+    if (!metricsManualClose) {
+      scheduleMetricsReconnect();
+    }
   };
 }
 
@@ -279,6 +321,8 @@ async function refresh() {
       }
     }
     health.value = healthResult;
+    uptimeBaseSeconds = Number(healthResult.uptimeSeconds || 0);
+    uptimeBaseAt = Date.now();
     refreshedAt.value = new Date().toLocaleTimeString();
     renderMap();
     updateCharts({});

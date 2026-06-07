@@ -9,22 +9,33 @@ const { theme, toggleTheme } = useTheme();
 const loading = ref(false);
 const error = ref('');
 const mfaRequired = ref(false);
+const mfaStateReady = ref(false);
+const mfaStateLoading = ref(false);
 const form = reactive({
-  username: 'admin',
+  username: '',
   password: '',
   mfaCode: ''
 });
 
 async function loadMfaState() {
+  mfaStateLoading.value = true;
   try {
     const result = await apiPost<boolean>('/sys/getEnableMfa', {});
     mfaRequired.value = Boolean(result.data);
-  } catch {
-    mfaRequired.value = false;
+    mfaStateReady.value = true;
+  } catch (err) {
+    mfaStateReady.value = false;
+    error.value = err instanceof Error ? `无法读取 MFA 状态：${err.message}` : '无法读取 MFA 状态，请稍后重试';
+  } finally {
+    mfaStateLoading.value = false;
   }
 }
 
 async function submit() {
+  if (!mfaStateReady.value) {
+    error.value = 'MFA 状态尚未确认，请等待页面初始化完成后再登录';
+    return;
+  }
   loading.value = true;
   error.value = '';
   try {
@@ -100,7 +111,7 @@ onMounted(loadMfaState);
         <form @submit.prevent="submit">
           <label>
             <span>账号</span>
-            <input v-model="form.username" autocomplete="username" />
+            <input v-model="form.username" autocomplete="username" placeholder="请输入账号" />
           </label>
           <label>
             <span>密码</span>
@@ -110,9 +121,10 @@ onMounted(loadMfaState);
             <span>MFA 验证码</span>
             <input v-model="form.mfaCode" inputmode="numeric" autocomplete="one-time-code" placeholder="6 位动态验证码" />
           </label>
+          <p v-if="mfaStateLoading" class="wd-login-hint">正在确认安全登录状态...</p>
           <p v-if="loading" class="wd-login-hint">正在连接控制台服务，超过 20 秒无响应时请优先检查容器健康和反向代理源站。</p>
           <p v-if="error" class="wd-error">{{ error }}</p>
-          <button type="submit" :disabled="loading">
+          <button type="submit" :disabled="loading || !mfaStateReady">
             {{ loading ? '登录中...' : '登录控制台' }}
           </button>
         </form>

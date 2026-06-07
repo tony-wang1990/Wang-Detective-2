@@ -118,13 +118,11 @@ public class SystemDiagnosticsService {
     }
 
     private SystemDiagnostics.CheckItem checkDefaultPassword() {
-        String adminAccount = adminCredentialService.getAccount();
-        String adminPassword = adminCredentialService.getPassword();
-        if ("admin".equals(adminAccount) && "admin123456".equals(adminPassword)) {
+        if (adminCredentialService.isUsingDefaultCredential()) {
             return item("admin-password", "WARN", "仍在使用默认管理员账号密码，建议立即修改");
         }
-        if (adminPassword == null || adminPassword.length() < 10) {
-            return item("admin-password", "WARN", "管理员密码长度偏短，建议至少 10 位");
+        if (adminCredentialService.hasPlainTextStoredPassword()) {
+            return item("admin-password", "WARN", "管理员密码仍是旧版明文存储，请重新登录或在系统配置中更新一次密码");
         }
         return item("admin-password", "OK", "管理员密码已自定义");
     }

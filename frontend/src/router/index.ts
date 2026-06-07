@@ -45,7 +45,11 @@ const router = createRouter({
 });
 
 router.beforeEach((to) => {
-  if (to.meta.requiresAuth && !sessionStorage.getItem('token')) {
+  const hasToken = Boolean(sessionStorage.getItem('token'));
+  if (to.path === '/login' && hasToken) {
+    return '/dashboard/home';
+  }
+  if (to.matched.some((record) => record.meta.requiresAuth) && !hasToken) {
     return '/login';
   }
   return true;

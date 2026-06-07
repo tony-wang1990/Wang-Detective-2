@@ -194,6 +194,7 @@ node scripts/remote-smoke-test.mjs
 - 部署验收：[docs/DEPLOYMENT_SMOKE_TEST.md](docs/DEPLOYMENT_SMOKE_TEST.md)
 - 100% 收口验收矩阵：[docs/ACCEPTANCE_MATRIX.md](docs/ACCEPTANCE_MATRIX.md)
 - 代码审计：[docs/CODE_AUDIT_REPORT.md](docs/CODE_AUDIT_REPORT.md)
+- 第三方审计复核：[docs/AUDIT_REVIEW_2026-06-07.md](docs/AUDIT_REVIEW_2026-06-07.md)
 - 项目路线：[docs/PROJECT_PROGRESS_ROADMAP.md](docs/PROJECT_PROGRESS_ROADMAP.md)
 - UI 路线：[docs/UI_REDESIGN_ROADMAP.md](docs/UI_REDESIGN_ROADMAP.md)
 - 救援/netboot 路线：[docs/RESCUE_NETBOOT_ROADMAP.md](docs/RESCUE_NETBOOT_ROADMAP.md)

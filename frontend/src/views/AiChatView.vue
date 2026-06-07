@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onBeforeUnmount, ref } from 'vue';
 import { Bot, Eraser, Send } from 'lucide-vue-next';
 
-const sessionId = `web-${Date.now()}`;
+const sessionId = `web-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`;
 const model = ref('deepseek-ai/DeepSeek-R1-Distill-Qwen-7B');
 const enableInternet = ref(false);
 const input = ref('');
 const messages = ref<{ role: 'user' | 'ai'; content: string }[]>([]);
 const loading = ref(false);
+let abortController: AbortController | null = null;
 
 async function ask() {
   const text = input.value.trim();
@@ -17,6 +18,8 @@ async function ask() {
   loading.value = true;
   const ai = { role: 'ai' as const, content: '' };
   messages.value.push(ai);
+  abortController?.abort();
+  abortController = new AbortController();
   try {
     const params = new URLSearchParams({
       message: text,
@@ -25,27 +28,52 @@ async function ask() {
       enableInternet: String(enableInternet.value)
     });
     const response = await fetch(`/chat/stream?${params.toString()}`, {
-      headers: sessionStorage.getItem('token') ? { Authorization: `Bearer ${sessionStorage.getItem('token')}` } : {}
+      headers: sessionStorage.getItem('token') ? { Authorization: `Bearer ${sessionStorage.getItem('token')}` } : {},
+      signal: abortController.signal
     });
     if (!response.ok || !response.body) throw new Error(`AI 接口 ${response.status}`);
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8');
+    let buffer = '';
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-      ai.content += decoder.decode(value, { stream: true }).replace(/^data:/gm, '');
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split(/\r?\n\r?\n/);
+      buffer = parts.pop() || '';
+      ai.content += parts.map(parseSseBlock).join('');
     }
+    ai.content += parseSseBlock(buffer);
   } catch (err) {
-    ai.content = err instanceof Error ? err.message : 'AI 请求失败';
+    if ((err as DOMException)?.name !== 'AbortError') {
+      ai.content = err instanceof Error ? err.message : 'AI 请求失败';
+    }
   } finally {
     loading.value = false;
+    abortController = null;
   }
 }
 
 async function clearSession() {
+  abortController?.abort();
   messages.value = [];
-  await fetch(`/chat/removeCache?sessionId=${encodeURIComponent(sessionId)}`).catch(() => undefined);
+  const token = sessionStorage.getItem('token');
+  await fetch(`/chat/removeCache?sessionId=${encodeURIComponent(sessionId)}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  }).catch(() => undefined);
 }
+
+function parseSseBlock(block: string) {
+  return block
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith('data:'))
+    .map((line) => line.slice(5).trimStart())
+    .join('\n');
+}
+
+onBeforeUnmount(() => {
+  abortController?.abort();
+});
 </script>
 
 <template>

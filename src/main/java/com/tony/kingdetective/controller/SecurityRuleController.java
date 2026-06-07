@@ -7,9 +7,8 @@ import com.tony.kingdetective.bean.params.oci.securityrule.AddIngressSecurityRul
 import com.tony.kingdetective.bean.params.oci.securityrule.GetSecurityRuleListPageParams;
 import com.tony.kingdetective.bean.params.oci.securityrule.RemoveSecurityRuleParams;
 import com.tony.kingdetective.bean.response.oci.securityrule.SecurityRuleListRsp;
+import com.tony.kingdetective.service.IAuditLogService;
 import com.tony.kingdetective.service.ISecurityRuleService;
-import com.tony.kingdetective.utils.CommonUtils;
-import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,6 +30,8 @@ public class SecurityRuleController {
 
     @Resource
     private ISecurityRuleService securityRuleService;
+    @Resource
+    private IAuditLogService auditLogService;
 
     @RequestMapping("/page")
     public ResponseData<Page<SecurityRuleListRsp.SecurityRuleInfo>> page(@Validated @RequestBody GetSecurityRuleListPageParams params) {
@@ -39,19 +40,46 @@ public class SecurityRuleController {
 
     @RequestMapping("/addIngress")
     public ResponseData<Void> addIngress(@Validated @RequestBody AddIngressSecurityRuleParams params){
-        securityRuleService.addIngress(params);
+        audited("OCI_SECURITY_RULE_ADD_INGRESS", params.getOciCfgId(), summarize(params), () -> securityRuleService.addIngress(params));
         return ResponseData.successData();
     }
 
     @RequestMapping("/addEgress")
     public ResponseData<Void> addEgress(@Validated @RequestBody AddEgressSecurityRuleParams params){
-        securityRuleService.addEgress(params);
+        audited("OCI_SECURITY_RULE_ADD_EGRESS", params.getOciCfgId(), summarize(params), () -> securityRuleService.addEgress(params));
         return ResponseData.successData();
     }
 
     @RequestMapping("/remove")
     public ResponseData<Void> remove(@Validated @RequestBody RemoveSecurityRuleParams params){
-        securityRuleService.remove(params);
+        audited("OCI_SECURITY_RULE_REMOVE", params.getOciCfgId(), summarize(params), () -> securityRuleService.remove(params));
         return ResponseData.successData();
+    }
+
+    private void audited(String operation, String target, String details, AuditedAction action) {
+        try {
+            action.run();
+            auditLogService.logSuccess(null, operation, safe(target), safe(details));
+        } catch (RuntimeException e) {
+            auditLogService.logFailure(null, operation, safe(target), safe(e.getMessage()));
+            throw e;
+        }
+    }
+
+    private String summarize(Object value) {
+        return safe(String.valueOf(value));
+    }
+
+    private String safe(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        String sanitized = value.replace('\n', ' ').replace('\r', ' ');
+        return sanitized.length() > 500 ? sanitized.substring(0, 500) + "..." : sanitized;
+    }
+
+    @FunctionalInterface
+    private interface AuditedAction {
+        void run();
     }
 }

@@ -75,6 +75,8 @@ function isActive(item: { path: string; match?: string[] }) {
 
 function logout() {
   sessionStorage.clear();
+  localStorage.removeItem('currentVersion');
+  localStorage.removeItem('latestVersion');
   router.push('/login');
 }
 

@@ -12,7 +12,7 @@ export default defineConfig({
   },
   build: {
     outDir: '../src/main/resources/dist',
-    emptyOutDir: false,
+    emptyOutDir: true,
     sourcemap: false,
     chunkSizeWarningLimit: 650,
     rollupOptions: {
