@@ -4,6 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.Tailer;
 import com.tony.kingdetective.service.AdminCredentialService;
 import com.tony.kingdetective.utils.CommonUtils;
+import com.tony.kingdetective.utils.TextEncodingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.input.TailerListener;
 import org.apache.commons.io.input.TailerListenerAdapter;
@@ -16,7 +17,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -121,7 +121,7 @@ public class LogWebSocketHandler extends TextWebSocketHandler {
         synchronized (recentLogs) {
             recentLogs.forEach(recentLog -> {
                 try {
-                    currentSession.sendMessage(new TextMessage(recentLog));
+                    currentSession.sendMessage(new TextMessage(TextEncodingUtils.repairMojibake(recentLog)));
                 } catch (IOException e) {
                     log.error("Error while sending recent log: {}", e.getLocalizedMessage());
                 }
@@ -138,16 +138,17 @@ public class LogWebSocketHandler extends TextWebSocketHandler {
             throw new IllegalStateException("Invalid log file path: " + filePath);
         }
 
-        tailer = new Tailer(logFile, Charset.defaultCharset(), line -> {
+        tailer = new Tailer(logFile, StandardCharsets.UTF_8, line -> {
             try {
                 if (!close) {
-                    messageQueue.put(line);
+                    String displayLine = TextEncodingUtils.repairMojibake(line);
+                    messageQueue.put(displayLine);
 
                     synchronized (recentLogs) {
                         if (recentLogs.size() >= MAX_RECENT_LOGS) {
                             recentLogs.pollFirst();
                         }
-                        recentLogs.addLast(line);
+                        recentLogs.addLast(displayLine);
                     }
                 }
             } catch (Exception e) {

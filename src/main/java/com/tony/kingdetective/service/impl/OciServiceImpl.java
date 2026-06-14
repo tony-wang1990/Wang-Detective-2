@@ -692,7 +692,7 @@ public class OciServiceImpl implements IOciService {
 
                 // 读取输出（便于调试）
                 try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(process.getInputStream()))) {
+                        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         log.info("[ssh-keygen] " + line);

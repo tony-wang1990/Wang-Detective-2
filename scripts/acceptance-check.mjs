@@ -245,6 +245,28 @@ check('install and server smoke include remote smoke helpers', () => {
   assert(serverSmoke.includes('remote-smoke-test.mjs'), 'server-smoke-test.sh must check remote-smoke-test.mjs presence');
 });
 
+check('Docker and install paths force UTF-8 text encoding', () => {
+  const dockerfile = read('Dockerfile');
+  const compose = read('docker-compose.yml');
+  const install = read('scripts/install.sh');
+  const logWs = read('src/main/java/com/tony/kingdetective/config/ws/LogWebSocketHandler.java');
+  const tgService = read('src/main/java/com/tony/kingdetective/service/impl/TgMessageServiceImpl.java');
+  const serviceLogs = read('src/main/java/com/tony/kingdetective/controller/ServiceLogController.java');
+
+  for (const flag of ['-Dfile.encoding=UTF-8', '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8']) {
+    assert(dockerfile.includes(flag), `Dockerfile must include ${flag}`);
+    assert(compose.includes(flag), `docker-compose.yml must include ${flag}`);
+    assert(install.includes(flag), `install.sh must include ${flag}`);
+  }
+  assert(dockerfile.includes('MAVEN_OPTS') && dockerfile.includes('-Dproject.build.sourceEncoding=UTF-8'), 'Dockerfile must force UTF-8 during Maven build');
+  assert(!logWs.includes('Charset.defaultCharset()'), 'log WebSocket must not tail logs with the platform default charset');
+  assert(logWs.includes('StandardCharsets.UTF_8'), 'log WebSocket must tail logs as UTF-8');
+  assert(logWs.includes('TextEncodingUtils.repairMojibake'), 'log WebSocket must repair legacy mojibake before display');
+  assert(tgService.includes('TextEncodingUtils.repairMojibake'), 'Telegram messages must repair legacy mojibake before send');
+  assert(tgService.includes('application/json; charset=UTF-8'), 'Telegram JSON posts must declare UTF-8');
+  assert(serviceLogs.includes('TextEncodingUtils.repairMojibake'), 'service log API must repair legacy mojibake before display');
+});
+
 check('remote smoke scripts cover required routes and endpoints', () => {
   const shellSmoke = read('scripts/remote-smoke-test.sh');
   const nodeSmoke = read('scripts/remote-smoke-test.mjs');

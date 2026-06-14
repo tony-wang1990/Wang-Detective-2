@@ -22,6 +22,7 @@ import com.tony.kingdetective.service.oci.OciRiskService;
 import com.tony.kingdetective.telegram.builder.KeyboardBuilder;
 import com.tony.kingdetective.telegram.handler.AbstractCallbackHandler;
 import com.tony.kingdetective.utils.CommonUtils;
+import com.tony.kingdetective.utils.TextEncodingUtils;
 import com.tony.kingdetective.utils.VersionUpdateUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -418,7 +419,7 @@ class OpsRecentLogsHandler extends AbstractCallbackHandler {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(logFile), StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                lines.add(line);
+                lines.add(TextEncodingUtils.repairMojibake(line));
                 if (lines.size() > limit) {
                     lines.removeFirst();
                 }

@@ -217,7 +217,7 @@ public class CommonUtils {
             // 如果是文件，读取文件内容
             try {
                 log.info("读取文件: " + file.getAbsolutePath());
-                String content = new String(Files.readAllBytes(file.toPath()));
+                String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
                 log.info("文件内容: " + content);
             } catch (IOException e) {
                 log.info("读取文件失败：" + file.getAbsolutePath() + "，错误：" + e.getMessage());
@@ -809,7 +809,7 @@ public class CommonUtils {
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 // Read the response
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
                 StringBuilder response = new StringBuilder();
                 String line;
 

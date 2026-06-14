@@ -29,9 +29,8 @@ services:
       - SERVER_PORT=${SERVER_PORT:-9527}
       - KING_DETECTIVE_GITHUB_REPOSITORY=${KING_DETECTIVE_GITHUB_REPOSITORY:-tony-wang1990/Wang-Detective}
       - KING_DETECTIVE_GITHUB_BRANCH=${KING_DETECTIVE_GITHUB_BRANCH:-main}
-      # fix: 去掉 -XX:TieredStopAtLevel=1（该参数禁用JIT高级优化，运行越久越慢）
-      # fix: 加 -Dspring.jmx.enabled=false 减少 MBean 初始化开销，约节省10~15秒启动时间
-      "JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS:--Xms128m -Xmx400m -XX:MaxMetaspaceSize=220m -XX:ActiveProcessorCount=1 -XX:+UseSerialGC -Djava.net.preferIPv4Stack=true -Dspring.jmx.enabled=false}"
+      # JVM defaults for 1C/1G VPS. UTF-8 keeps Docker logs, service log page and Telegram text readable.
+      - "JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS:--Xms128m -Xmx400m -XX:MaxMetaspaceSize=220m -XX:ActiveProcessorCount=1 -XX:+UseSerialGC -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 -Djava.net.preferIPv4Stack=true -Dspring.jmx.enabled=false}"
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
       - TELEGRAM_BOT_CHAT_ID=${TELEGRAM_BOT_CHAT_ID:-${TELEGRAM_CHAT_ID:-}}

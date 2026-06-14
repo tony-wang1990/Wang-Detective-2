@@ -9,6 +9,7 @@ import com.tony.kingdetective.bean.entity.OciKv;
 import com.tony.kingdetective.enums.SysCfgEnum;
 import com.tony.kingdetective.service.IMessageService;
 import com.tony.kingdetective.service.IOciKvService;
+import com.tony.kingdetective.utils.TextEncodingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -84,7 +85,8 @@ public class TgMessageServiceImpl implements IMessageService {
 
     private void doSend(String message, String botToken, String chatId) {
         try {
-            String encodedMessage = URLEncoder.encode(message, StandardCharsets.UTF_8.toString());
+            String safeMessage = TextEncodingUtils.repairMojibake(message);
+            String encodedMessage = URLEncoder.encode(safeMessage, StandardCharsets.UTF_8.toString());
             String urlString = String.format(TG_URL, botToken, chatId, encodedMessage);
             HttpResponse response = HttpUtil.createGet(urlString).execute();
 
@@ -101,6 +103,7 @@ public class TgMessageServiceImpl implements IMessageService {
 
     private void doSendWithUpdateButton(String message, String botToken, String chatId) {
         try {
+            String safeMessage = TextEncodingUtils.repairMojibake(message);
             Object updateButton = JSONUtil.createObj()
                     .set("text", "🔄 点击更新")
                     .set("callback_data", "update_sys_version");
@@ -109,12 +112,12 @@ public class TgMessageServiceImpl implements IMessageService {
                     .set("callback_data", "version_info");
             String body = JSONUtil.createObj()
                     .set("chat_id", chatId)
-                    .set("text", message)
+                    .set("text", safeMessage)
                     .set("reply_markup", JSONUtil.createObj()
                             .set("inline_keyboard", List.of(List.of(updateButton), List.of(versionButton))))
                     .toString();
             HttpResponse response = HttpUtil.createPost(String.format(TG_SEND_URL, botToken))
-                    .contentType("application/json")
+                    .contentType("application/json; charset=UTF-8")
                     .body(body)
                     .execute();
 

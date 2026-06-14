@@ -7,6 +7,7 @@ import com.tony.kingdetective.bean.entity.OciKv;
 import com.tony.kingdetective.enums.SysCfgEnum;
 import com.tony.kingdetective.service.IMessageService;
 import com.tony.kingdetective.service.IOciKvService;
+import com.tony.kingdetective.utils.TextEncodingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.springframework.stereotype.Service;
@@ -48,7 +49,7 @@ public class DingMessageServiceImpl implements IMessageService {
         if (null != dingToken && StrUtil.isNotBlank(dingToken.getValue()) &&
                 null != dingSecret && StrUtil.isNotBlank(dingSecret.getValue())) {
             try {
-                sendDingTalkMessage(String.format(DING_URL, dingToken.getValue()), dingSecret.getValue(), message);
+                sendDingTalkMessage(String.format(DING_URL, dingToken.getValue()), dingSecret.getValue(), TextEncodingUtils.repairMojibake(message));
             } catch (Exception e) {
                 log.info("Failed to send dingding message, error: {}", e.getLocalizedMessage());
             }
@@ -77,7 +78,7 @@ public class DingMessageServiceImpl implements IMessageService {
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
         byte[] signData = mac.doFinal(stringToSign.getBytes(StandardCharsets.UTF_8));
-        return new String(Base64.encodeBase64(signData));
+        return new String(Base64.encodeBase64(signData), StandardCharsets.US_ASCII);
     }
 
     private static void sendPostRequest(String url, String jsonPayload) throws Exception {
@@ -86,7 +87,7 @@ public class DingMessageServiceImpl implements IMessageService {
         connection.setConnectTimeout(10_000);
         connection.setReadTimeout(10_000);
         connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/json");
+        connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         connection.setDoOutput(true);
 
         try (OutputStream os = connection.getOutputStream()) {

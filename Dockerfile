@@ -1,10 +1,14 @@
 FROM maven:3-eclipse-temurin-21 AS builder
 
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    MAVEN_OPTS="-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8"
+
 WORKDIR /app
 
 COPY . .
 
-RUN mvn clean package -DskipTests \
+RUN mvn -Dfile.encoding=UTF-8 -Dproject.build.sourceEncoding=UTF-8 clean package -DskipTests \
     && cp target/king-detective-*.jar /app/king-detective.jar
 
 FROM eclipse-temurin:21-jre-jammy AS base-with-tools

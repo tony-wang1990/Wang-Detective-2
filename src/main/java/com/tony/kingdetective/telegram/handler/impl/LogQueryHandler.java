@@ -2,6 +2,7 @@ package com.tony.kingdetective.telegram.handler.impl;
 
 import com.tony.kingdetective.telegram.handler.AbstractCallbackHandler;
 import com.tony.kingdetective.utils.CommonUtils;
+import com.tony.kingdetective.utils.TextEncodingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
@@ -109,7 +110,7 @@ public class LogQueryHandler extends AbstractCallbackHandler {
 
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    lastLines.add(line);
+                    lastLines.add(TextEncodingUtils.repairMojibake(line));
                     if (lastLines.size() > MAX_LINES) {
                         lastLines.removeFirst();
                     }

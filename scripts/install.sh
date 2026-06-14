@@ -1,15 +1,20 @@
 #!/bin/bash
 
 # Keep this script with LF line endings. GitHub raw executes it directly on Linux.
+set -u
+
+export LANG="${LANG:-C.UTF-8}"
+export LC_ALL="${LC_ALL:-C.UTF-8}"
+
+DEFAULT_JAVA_TOOL_OPTIONS="-Xms96m -Xmx384m -XX:MaxMetaspaceSize=192m -XX:ActiveProcessorCount=1 -XX:+UseSerialGC -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 -Djava.net.preferIPv4Stack=true -Dspring.jmx.enabled=false"
 
 echo "=== King-Detective 安装脚本 ==="
 echo "步骤 1: 检查环境..."
 
-# 检查必要的命令
 command -v wget >/dev/null 2>&1 || { echo "错误: 未安装 wget"; exit 1; }
 command -v curl >/dev/null 2>&1 || { echo "错误: 未安装 curl"; exit 1; }
-# 检查并安装 Docker
-if ! command -v docker &> /dev/null; then
+
+if ! command -v docker >/dev/null 2>&1; then
     echo "未检测到 Docker，正在尝试自动安装..."
     if [[ -f /etc/os-release ]]; then
         . /etc/os-release
@@ -29,77 +34,93 @@ else
     echo "  - Docker 已安装"
 fi
 
-# 检查并安装 Docker Compose
-if ! command -v docker-compose &> /dev/null; then
-    echo "未检测到 docker-compose，正在尝试安装..."
-    # 尝试作为 Docker 插件安装
-    if command -v docker &> /dev/null; then
-         echo "  - 尝试安装 Docker Compose 插件..."
-         if [[ -f /etc/os-release ]]; then
-            . /etc/os-release
-            if [[ "$ID" == "ubuntu" || "$ID" == "debian" ]]; then
-                apt-get update && apt-get install -y docker-compose-plugin
-            elif [[ "$ID" == "centos" || "$ID" == "ol" ]]; then
-                yum install -y docker-compose-plugin
-            fi
+if ! command -v docker-compose >/dev/null 2>&1 && ! docker compose version >/dev/null 2>&1; then
+    echo "未检测到 Docker Compose，正在尝试安装..."
+    if [[ -f /etc/os-release ]]; then
+        . /etc/os-release
+        if [[ "$ID" == "ubuntu" || "$ID" == "debian" ]]; then
+            apt-get update && apt-get install -y docker-compose-plugin
+        elif [[ "$ID" == "centos" || "$ID" == "ol" ]]; then
+            yum install -y docker-compose-plugin
         fi
     fi
-    
-    # 如果插件安装失败或仍无法通过 docker-compose 命令调用（为了兼容旧习惯，我们创建一个别名或安装独立二进制）
-    if ! docker compose version &> /dev/null; then
-         # 下载独立二进制文件 (兼容 ARM64 和 AMD64)
-         ARCH=$(uname -m)
-         if [[ "$ARCH" == "aarch64" ]]; then
-             curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-aarch64" -o /usr/local/bin/docker-compose
-         else
-             curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-         fi
-         chmod +x /usr/local/bin/docker-compose
+
+    if ! docker compose version >/dev/null 2>&1; then
+        ARCH=$(uname -m)
+        if [[ "$ARCH" == "aarch64" ]]; then
+            curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-aarch64" -o /usr/local/bin/docker-compose
+        else
+            curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        fi
+        chmod +x /usr/local/bin/docker-compose
     fi
 fi
 
-# 再次检查并选择 Compose 命令。优先使用 Docker Compose v2，兼容旧 docker-compose v1。
-if ! command -v docker &> /dev/null; then echo "错误: Docker 安装失败"; exit 1; fi
-if docker compose version &> /dev/null; then
+if ! command -v docker >/dev/null 2>&1; then
+    echo "错误: Docker 安装失败"
+    exit 1
+fi
+
+if docker compose version >/dev/null 2>&1; then
     echo "  - Docker Compose Plugin 已安装"
     compose() { docker compose "$@"; }
-elif command -v docker-compose &> /dev/null; then
+elif command -v docker-compose >/dev/null 2>&1; then
     echo "  - docker-compose 已安装"
     compose() { docker-compose "$@"; }
 else
-    echo "错误: Docker Compose 安装失败"; exit 1;
+    echo "错误: Docker Compose 安装失败"
+    exit 1
 fi
 
 echo "步骤 2: 创建目录..."
-mkdir -p /app/king-detective/data /app/king-detective/keys /app/king-detective/logs /app/king-detective/runtime /app/king-detective/scripts /app/king-detective/backups || { echo "错误: 无法创建目录"; exit 1; }
-cd /app/king-detective || { echo "错误: 无法进入目录"; exit 1; }
+mkdir -p /app/king-detective/data /app/king-detective/keys /app/king-detective/logs /app/king-detective/runtime /app/king-detective/scripts /app/king-detective/backups || {
+    echo "错误: 无法创建目录"
+    exit 1
+}
+cd /app/king-detective || {
+    echo "错误: 无法进入目录 /app/king-detective"
+    exit 1
+}
 
 echo "步骤 3: 下载配置文件..."
 
-# 只在文件不存在时才下载，避免覆盖用户配置
 if [ ! -f "docker-compose.yml" ]; then
-    wget -q https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/docker-compose.yml || { echo "错误: 下载 docker-compose.yml 失败"; exit 1; }
+    wget -q https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/docker-compose.yml || {
+        echo "错误: 下载 docker-compose.yml 失败"
+        exit 1
+    }
     echo "  - docker-compose.yml 下载成功"
 else
     echo "  - docker-compose.yml 已存在，跳过下载"
 fi
 
-# 兼容早期增强版部署文件：刷新旧镜像、旧健康检查、未启用 watcher 或缺少低配 VPS 优化的 compose。
-if grep -q "king-detective-websockify\\|ghcr.io/tony-wang1990/king-detective:main\\|start_period: 45s\\|profiles:.*watcher" docker-compose.yml || ! grep -q "JAVA_TOOL_OPTIONS" docker-compose.yml || ! grep -q "king-detective-watcher" docker-compose.yml || ! grep -Fq 'image: ${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective:main}' docker-compose.yml || ! grep -Fq './backups:/app/king-detective/backups' docker-compose.yml || ! grep -Fq './scripts:/app/king-detective/scripts:ro' docker-compose.yml; then
+if grep -q "king-detective-websockify\\|ghcr.io/tony-wang1990/king-detective:main\\|start_period: 45s\\|profiles:.*watcher" docker-compose.yml \
+    || ! grep -q "JAVA_TOOL_OPTIONS" docker-compose.yml \
+    || ! grep -q "king-detective-watcher" docker-compose.yml \
+    || ! grep -Fq 'image: ${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective:main}' docker-compose.yml \
+    || ! grep -Fq './backups:/app/king-detective/backups' docker-compose.yml \
+    || ! grep -Fq './scripts:/app/king-detective/scripts:ro' docker-compose.yml \
+    || ! grep -Fq -- '-Dfile.encoding=UTF-8' docker-compose.yml; then
     backup_file="docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)"
     cp docker-compose.yml "$backup_file"
-    wget -q -O docker-compose.yml https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/docker-compose.yml || { echo "错误: 刷新 docker-compose.yml 失败"; mv "$backup_file" docker-compose.yml; exit 1; }
+    wget -q -O docker-compose.yml https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/docker-compose.yml || {
+        echo "错误: 刷新 docker-compose.yml 失败"
+        mv "$backup_file" docker-compose.yml
+        exit 1
+    }
     echo "  - 检测到旧版 docker-compose.yml，已备份为 $backup_file 并刷新为新版"
 fi
 
 if [ ! -f "application.yml" ]; then
-    wget -q https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/src/main/resources/application.yml || { echo "错误: 下载 application.yml 失败"; exit 1; }
+    wget -q https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/src/main/resources/application.yml || {
+        echo "错误: 下载 application.yml 失败"
+        exit 1
+    }
     echo "  - application.yml 下载成功"
 else
     echo "  - application.yml 已存在，保留现有配置"
 fi
 
-# 兼容旧版 application.yml：默认 IPv6 监听在部分 VPS / Docker 环境下会导致本机健康检查失败。
 if grep -q "address: '::'\\|^  port: 9527$" application.yml; then
     app_backup_file="application.yml.bak.$(date +%Y%m%d%H%M%S)"
     cp application.yml "$app_backup_file"
@@ -115,6 +136,7 @@ if [ ! -f ".env" ]; then
     TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-${BOT_TOKEN:-}}"
     TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-${TG_CHAT_ID:-}}"
     TELEGRAM_BOT_CHAT_ID="${TELEGRAM_BOT_CHAT_ID:-$TELEGRAM_CHAT_ID}"
+    JAVA_TOOL_OPTIONS_VALUE="${JAVA_TOOL_OPTIONS:-$DEFAULT_JAVA_TOOL_OPTIONS}"
     cat > .env <<EOF
 ADMIN_USERNAME=${ADMIN_USERNAME}
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
@@ -130,7 +152,8 @@ SERVER_ADDRESS=${SERVER_ADDRESS:-0.0.0.0}
 SERVER_PORT=${SERVER_PORT:-9527}
 KING_DETECTIVE_GITHUB_REPOSITORY=${KING_DETECTIVE_GITHUB_REPOSITORY:-tony-wang1990/Wang-Detective}
 KING_DETECTIVE_GITHUB_BRANCH=${KING_DETECTIVE_GITHUB_BRANCH:-main}
-JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS:--Xms96m -Xmx384m -XX:MaxMetaspaceSize=192m -XX:ActiveProcessorCount=1 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Djava.net.preferIPv4Stack=true}
+KING_DETECTIVE_IMAGE=${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective:main}
+JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS_VALUE}
 EOF
     chmod 600 .env
     echo "  - .env 已生成"
@@ -150,11 +173,36 @@ ensure_env() {
     fi
 }
 
+append_env_word() {
+    key="$1"
+    word="$2"
+    tmp_env=".env.tmp.$$"
+    awk -v key="$key" -v word="$word" '
+        BEGIN { found = 0 }
+        index($0, key "=") == 1 {
+            found = 1
+            value = substr($0, length(key) + 2)
+            if (index(" " value " ", " " word " ") == 0) {
+                $0 = $0 " " word
+                changed = 1
+            }
+        }
+        { print }
+        END {
+            if (!found) {
+                print key "=" word
+                changed = 1
+            }
+        }
+    ' .env > "$tmp_env" && mv "$tmp_env" .env
+}
+
 current_admin_password="$(grep -E '^ADMIN_PASSWORD=' .env | tail -n1 | cut -d= -f2-)"
 current_admin_password="${current_admin_password:-admin123456}"
 current_tg_chat_id="$(grep -E '^TELEGRAM_BOT_CHAT_ID=' .env | tail -n1 | cut -d= -f2-)"
 current_tg_chat_id="${current_tg_chat_id:-$(grep -E '^TELEGRAM_CHAT_ID=' .env | tail -n1 | cut -d= -f2-)}"
 current_tg_chat_id="${current_tg_chat_id:-$(grep -E '^TG_CHAT_ID=' .env | tail -n1 | cut -d= -f2-)}"
+
 ensure_env "OPS_SSH_SECRET_KEY" "$current_admin_password"
 ensure_env "TELEGRAM_CHAT_ID" "$current_tg_chat_id"
 ensure_env "TELEGRAM_BOT_CHAT_ID" "$current_tg_chat_id"
@@ -163,7 +211,11 @@ ensure_env "SERVER_PORT" "9527"
 ensure_env "KING_DETECTIVE_GITHUB_REPOSITORY" "tony-wang1990/Wang-Detective"
 ensure_env "KING_DETECTIVE_GITHUB_BRANCH" "main"
 ensure_env "KING_DETECTIVE_IMAGE" "ghcr.io/tony-wang1990/wang-detective:main"
-ensure_env "JAVA_TOOL_OPTIONS" "-Xms96m -Xmx384m -XX:MaxMetaspaceSize=192m -XX:ActiveProcessorCount=1 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Djava.net.preferIPv4Stack=true"
+ensure_env "JAVA_TOOL_OPTIONS" "$DEFAULT_JAVA_TOOL_OPTIONS"
+append_env_word "JAVA_TOOL_OPTIONS" "-Dfile.encoding=UTF-8"
+append_env_word "JAVA_TOOL_OPTIONS" "-Dstdout.encoding=UTF-8"
+append_env_word "JAVA_TOOL_OPTIONS" "-Dstderr.encoding=UTF-8"
+chmod 600 .env
 
 echo "步骤 3.1: 同步运维脚本..."
 SCRIPT_BASE_URL="https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/scripts"
@@ -175,17 +227,31 @@ download_script() {
 
     if [ -d "$target" ]; then
         backup_target="${target}.dir.bak.$(date +%Y%m%d%H%M%S)"
-        mv "$target" "$backup_target" || { echo "错误: 备份目录 ${target} 失败"; exit 1; }
+        mv "$target" "$backup_target" || {
+            echo "错误: 备份目录 ${target} 失败"
+            exit 1
+        }
         echo "  - 检测到 ${target} 是目录，已备份为 ${backup_target}"
     elif [ -e "$target" ] && [ ! -f "$target" ]; then
         backup_target="${target}.bak.$(date +%Y%m%d%H%M%S)"
-        mv "$target" "$backup_target" || { echo "错误: 备份异常路径 ${target} 失败"; exit 1; }
+        mv "$target" "$backup_target" || {
+            echo "错误: 备份异常路径 ${target} 失败"
+            exit 1
+        }
         echo "  - 检测到 ${target} 不是普通文件，已备份为 ${backup_target}"
     fi
 
     rm -f "$temp_target"
-    wget -q -O "$temp_target" "$url" || { rm -f "$temp_target"; echo "错误: 下载 ${target} 失败"; exit 1; }
-    mv "$temp_target" "$target" || { rm -f "$temp_target"; echo "错误: 写入 ${target} 失败"; exit 1; }
+    wget -q -O "$temp_target" "$url" || {
+        rm -f "$temp_target"
+        echo "错误: 下载 ${target} 失败"
+        exit 1
+    }
+    mv "$temp_target" "$target" || {
+        rm -f "$temp_target"
+        echo "错误: 写入 ${target} 失败"
+        exit 1
+    }
 }
 
 for script_name in \
@@ -208,7 +274,10 @@ chmod +x scripts/*.sh
 echo "  - 运维脚本已同步"
 
 echo "步骤 4: 拉取最新镜像..."
-compose pull king-detective watcher || { echo "错误: 拉取核心镜像或 watcher 镜像失败"; exit 1; }
+compose pull king-detective watcher || {
+    echo "错误: 拉取核心镜像或 watcher 镜像失败"
+    exit 1
+}
 
 echo "步骤 5: 启动服务..."
 for container_id in $(docker ps -aq --filter "name=king-detective"); do
@@ -219,10 +288,11 @@ for container_id in $(docker ps -aq --filter "name=king-detective"); do
             ;;
     esac
 done
-# docker-compose v1.29 在重建新版 BuildKit/GHCR 镜像时可能触发 KeyError: ContainerConfig。
-# 先删除旧容器和失败重建留下的 hash_king-detective 残留容器再创建。
-# 数据目录均为 bind mount，不会删除业务数据。
-compose up -d king-detective watcher || { echo "错误: 启动服务失败"; exit 1; }
+
+compose up -d king-detective watcher || {
+    echo "错误: 启动服务失败"
+    exit 1
+}
 
 echo "步骤 6: 等待服务就绪..."
 HEALTH_URL="http://127.0.0.1:9527/actuator/health"

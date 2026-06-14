@@ -2,6 +2,7 @@ package com.tony.kingdetective.controller;
 
 import com.tony.kingdetective.bean.ResponseData;
 import com.tony.kingdetective.utils.CommonUtils;
+import com.tony.kingdetective.utils.TextEncodingUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -52,13 +53,14 @@ public class ServiceLogController {
         try (BufferedReader reader = Files.newBufferedReader(logPath, StandardCharsets.UTF_8)) {
             String line;
             while ((line = reader.readLine()) != null) {
-                if (!matches(line, normalizedLevel, normalizedKeyword)) {
+                String displayLine = TextEncodingUtils.repairMojibake(line);
+                if (!matches(displayLine, normalizedLevel, normalizedKeyword)) {
                     continue;
                 }
                 if (deque.size() >= limit) {
                     deque.pollFirst();
                 }
-                deque.addLast(line);
+                deque.addLast(displayLine);
             }
         }
         return new ArrayList<>(deque);
