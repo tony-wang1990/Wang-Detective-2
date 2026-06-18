@@ -45,7 +45,7 @@ VOLUME ["/app/king-detective/data", "/app/king-detective/keys"]
 
 EXPOSE 9527
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10m --retries=5 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15m --retries=5 \
     CMD curl -fsS http://127.0.0.1:9527/actuator/health | grep -q '"status":"UP"' || exit 1
 
 CMD exec java \

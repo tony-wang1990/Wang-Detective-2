@@ -100,7 +100,8 @@ if grep -q "king-detective-websockify\\|ghcr.io/tony-wang1990/king-detective:mai
     || ! grep -Fq 'image: ${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective:main}' docker-compose.yml \
     || ! grep -Fq './backups:/app/king-detective/backups' docker-compose.yml \
     || ! grep -Fq './scripts:/app/king-detective/scripts:ro' docker-compose.yml \
-    || ! grep -Fq -- '-Dfile.encoding=UTF-8' docker-compose.yml; then
+    || ! grep -Fq -- '-Dfile.encoding=UTF-8' docker-compose.yml \
+    || ! grep -Fq 'start_period: 15m' docker-compose.yml; then
     backup_file="docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)"
     cp docker-compose.yml "$backup_file"
     wget -q -O docker-compose.yml https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/docker-compose.yml || {
@@ -197,6 +198,27 @@ append_env_word() {
     ' .env > "$tmp_env" && mv "$tmp_env" .env
 }
 
+remove_env_word() {
+    key="$1"
+    word="$2"
+    tmp_env=".env.tmp.$$"
+    awk -v key="$key" -v word="$word" '
+        index($0, key "=") == 1 {
+            value = substr($0, length(key) + 2)
+            count = split(value, parts, /[[:space:]]+/)
+            result = ""
+            for (i = 1; i <= count; i++) {
+                if (parts[i] != "" && parts[i] != word) {
+                    result = result (result == "" ? "" : " ") parts[i]
+                }
+            }
+            print key "=" result
+            next
+        }
+        { print }
+    ' .env > "$tmp_env" && mv "$tmp_env" .env
+}
+
 current_admin_password="$(grep -E '^ADMIN_PASSWORD=' .env | tail -n1 | cut -d= -f2-)"
 current_admin_password="${current_admin_password:-admin123456}"
 current_tg_chat_id="$(grep -E '^TELEGRAM_BOT_CHAT_ID=' .env | tail -n1 | cut -d= -f2-)"
@@ -212,9 +234,11 @@ ensure_env "KING_DETECTIVE_GITHUB_REPOSITORY" "tony-wang1990/Wang-Detective"
 ensure_env "KING_DETECTIVE_GITHUB_BRANCH" "main"
 ensure_env "KING_DETECTIVE_IMAGE" "ghcr.io/tony-wang1990/wang-detective:main"
 ensure_env "JAVA_TOOL_OPTIONS" "$DEFAULT_JAVA_TOOL_OPTIONS"
+remove_env_word "JAVA_TOOL_OPTIONS" "-XX:TieredStopAtLevel=1"
 append_env_word "JAVA_TOOL_OPTIONS" "-Dfile.encoding=UTF-8"
 append_env_word "JAVA_TOOL_OPTIONS" "-Dstdout.encoding=UTF-8"
 append_env_word "JAVA_TOOL_OPTIONS" "-Dstderr.encoding=UTF-8"
+append_env_word "JAVA_TOOL_OPTIONS" "-Dspring.jmx.enabled=false"
 chmod 600 .env
 
 echo "步骤 3.1: 同步运维脚本..."
@@ -302,6 +326,11 @@ while true; do
     HEALTH_BODY="$(curl -fsS --max-time 5 "$HEALTH_URL" 2>/dev/null || true)"
     if echo "$HEALTH_BODY" | grep -q '"status":"UP"'; then
         echo "  - 服务已就绪 health=UP"
+        break
+    fi
+    if echo "$HEALTH_BODY" | grep -q '"databaseConnectivity"[[:space:]]*:[[:space:]]*true'; then
+        echo "  - 服务已可用，数据库连接正常；当前仅存在资源健康告警"
+        echo "  - 健康详情: $HEALTH_BODY"
         break
     fi
 

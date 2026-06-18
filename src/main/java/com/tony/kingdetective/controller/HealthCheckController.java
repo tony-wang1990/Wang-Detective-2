@@ -41,7 +41,10 @@ public class HealthCheckController {
         long usedMemory = runtime.totalMemory() - runtime.freeMemory();
         boolean memoryOk = checkMemory(usedMemory, maxMemory);
         
-        String status = (databaseOk && memoryOk) ? "UP" : "DOWN";
+        // Container liveness must describe whether the application can serve requests.
+        // High JVM usage is still exposed as memoryStatus=false, but it must not make an
+        // otherwise available service permanently unhealthy on a 1 GB VPS.
+        String status = databaseOk ? "UP" : "DOWN";
         
         return HealthStatus.builder()
                 .status(status)
@@ -74,7 +77,7 @@ public class HealthCheckController {
         try {
             double usagePercent = (double) usedMemory / maxMemory * 100;
             
-            log.debug("内存使用率: {:.2f}%", usagePercent);
+            log.debug("内存使用率: {}%", String.format("%.2f", usagePercent));
             
             // 如果内存使用率超过90%则认为不健康
             return usagePercent < 90;

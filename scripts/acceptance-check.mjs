@@ -267,6 +267,20 @@ check('Docker and install paths force UTF-8 text encoding', () => {
   assert(serviceLogs.includes('TextEncodingUtils.repairMojibake'), 'service log API must repair legacy mojibake before display');
 });
 
+check('low-memory VPS health checks do not report false downtime', () => {
+  const healthController = read('src/main/java/com/tony/kingdetective/controller/HealthCheckController.java');
+  const dockerfile = read('Dockerfile');
+  const compose = read('docker-compose.yml');
+  const install = read('scripts/install.sh');
+
+  assert(healthController.includes('String status = databaseOk ? "UP" : "DOWN"'), 'memory warnings must not make an available application DOWN');
+  assert(healthController.includes('.memoryStatus(memoryOk)'), 'memory warning detail must remain visible');
+  assert(dockerfile.includes('--start-period=15m'), 'Dockerfile health check must allow slow 1C/1G startup');
+  assert(compose.includes('start_period: 15m'), 'compose health check must allow slow 1C/1G startup');
+  assert(install.includes('remove_env_word "JAVA_TOOL_OPTIONS" "-XX:TieredStopAtLevel=1"'), 'install.sh must remove the legacy TieredStopAtLevel option');
+  assert(install.includes('"databaseConnectivity"[[:space:]]*:[[:space:]]*true'), 'install.sh must accept an available service with only resource warnings');
+});
+
 check('remote smoke scripts cover required routes and endpoints', () => {
   const shellSmoke = read('scripts/remote-smoke-test.sh');
   const nodeSmoke = read('scripts/remote-smoke-test.mjs');
