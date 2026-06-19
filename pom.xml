@@ -188,10 +188,11 @@
             <version>9.2.0</version>
         </dependency>
 
-        <!--AI-->
+        <!-- AI is created explicitly by DynamicChatClientFactory. Keep the client
+             library without the unused Spring Boot auto-configuration starter. -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
+            <artifactId>spring-ai-openai</artifactId>
             <version>${spring-ai.version}</version>
         </dependency>
     </dependencies>
@@ -316,6 +317,5 @@
     <!--    </profiles>-->
 
 </project>
-
 
 

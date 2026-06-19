@@ -24,9 +24,11 @@ import com.tony.kingdetective.enums.SysCfgEnum;
 import com.tony.kingdetective.enums.SysCfgTypeEnum;
 import com.tony.kingdetective.service.*;
 import com.tony.kingdetective.telegram.TgBot;
+import com.tony.kingdetective.telegram.factory.CallbackHandlerFactory;
 import com.tony.kingdetective.utils.CommonUtils;
 import com.tony.kingdetective.utils.SQLiteHelper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -38,6 +40,7 @@ import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 
 import jakarta.annotation.Resource;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -81,6 +84,8 @@ public class OciTask implements ApplicationRunner {
     private ExecutorService virtualExecutor;
     @Resource
     private AdminCredentialService adminCredentialService;
+    @Resource
+    private ObjectProvider<CallbackHandlerFactory> callbackHandlerFactoryProvider;
 
     private static volatile boolean isPushedLatestVersion = false;
     public static volatile TelegramBotsLongPollingApplication botsApplication;
@@ -93,10 +98,12 @@ public class OciTask implements ApplicationRunner {
     private String telegramBotToken;
     @Value("${telegram.bot.chat-id:${TELEGRAM_BOT_CHAT_ID:${TELEGRAM_CHAT_ID:${TG_CHAT_ID:}}}}")
     private String telegramChatId;
+    @Value("${king-detective.startup.telegram-delay-seconds:${TELEGRAM_STARTUP_DELAY_SECONDS:20}}")
+    private long telegramStartupDelaySeconds;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        startTgBog();
+        scheduleTgBotStartup();
         updateUserInDb();
         cleanLogTask();
         cleanAndRestartTask();
@@ -109,7 +116,13 @@ public class OciTask implements ApplicationRunner {
         initMapData();
     }
 
-    private void startTgBog() {
+    private void scheduleTgBotStartup() {
+        long delaySeconds = Math.max(0, telegramStartupDelaySeconds);
+        taskScheduler.schedule(this::startTgBot, Instant.now().plusSeconds(delaySeconds));
+        log.info("TG Bot startup scheduled {} seconds after the web application is available", delaySeconds);
+    }
+
+    private void startTgBot() {
         virtualExecutor.execute(() -> {
             OciKv tgToken = getSingleKv(kvService, SysCfgEnum.SYS_TG_BOT_TOKEN, null, null);
             OciKv tgChatId = getSingleKv(kvService, SysCfgEnum.SYS_TG_CHAT_ID, null, null);
@@ -125,6 +138,10 @@ public class OciTask implements ApplicationRunner {
                 return;
             }
             if (StrUtil.isNotBlank(token) && StrUtil.isNotBlank(chatId)) {
+                long warmupStartedAt = System.nanoTime();
+                callbackHandlerFactoryProvider.getObject();
+                log.info("TG callback handlers warmed in {} ms",
+                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - warmupStartedAt));
                 botsApplication = new TelegramBotsLongPollingApplication();
                 try {
                     botsApplication.registerBot(token, new TgBot(token, chatId));

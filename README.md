@@ -192,6 +192,7 @@ node scripts/remote-smoke-test.mjs
 ## 文档索引
 
 - 部署验收：[docs/DEPLOYMENT_SMOKE_TEST.md](docs/DEPLOYMENT_SMOKE_TEST.md)
+- 启动性能审计：[docs/STARTUP_PERFORMANCE_AUDIT_2026-06-19.md](docs/STARTUP_PERFORMANCE_AUDIT_2026-06-19.md)
 - 100% 收口验收矩阵：[docs/ACCEPTANCE_MATRIX.md](docs/ACCEPTANCE_MATRIX.md)
 - 代码审计：[docs/CODE_AUDIT_REPORT.md](docs/CODE_AUDIT_REPORT.md)
 - 第三方审计复核：[docs/AUDIT_REVIEW_2026-06-07.md](docs/AUDIT_REVIEW_2026-06-07.md)

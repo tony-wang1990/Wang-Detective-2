@@ -2,7 +2,6 @@ package com.tony.kingdetective.telegram.factory;
 
 import com.tony.kingdetective.telegram.handler.CallbackHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -10,29 +9,25 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 回调处理器工厂
- * 
- * @author yohann
+ * Telegram callback handler registry.
  */
 @Slf4j
 @Component
 public class CallbackHandlerFactory {
-    
+
     private final List<CallbackHandler> handlers;
-    
-    @Autowired
+
     public CallbackHandlerFactory(List<CallbackHandler> handlers) {
         this.handlers = handlers.stream()
-                .sorted(Comparator.comparingInt((CallbackHandler handler) -> handler.getCallbackPattern().length()).reversed())
+                .sorted(Comparator.comparingInt(
+                        (CallbackHandler handler) -> handler.getCallbackPattern().length()
+                ).reversed())
                 .toList();
-        log.info("已加载 {} 个回调处理器", handlers.size());
+        log.info("已加载 {} 个 Telegram 回调处理器", handlers.size());
     }
-    
+
     /**
-     * 根据回调数据获取处理器
-     * 
-     * @param callbackData 回调数据
-     * @return 处理器
+     * Finds the first handler matching the callback payload.
      */
     public Optional<CallbackHandler> getHandler(String callbackData) {
         return handlers.stream()

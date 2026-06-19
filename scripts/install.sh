@@ -6,7 +6,7 @@ set -u
 export LANG="${LANG:-C.UTF-8}"
 export LC_ALL="${LC_ALL:-C.UTF-8}"
 
-DEFAULT_JAVA_TOOL_OPTIONS="-Xms96m -Xmx384m -XX:MaxMetaspaceSize=192m -XX:ActiveProcessorCount=1 -XX:+UseSerialGC -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 -Djava.net.preferIPv4Stack=true -Dspring.jmx.enabled=false"
+DEFAULT_JAVA_TOOL_OPTIONS="-Xms96m -Xmx384m -XX:MaxMetaspaceSize=192m -XX:ActiveProcessorCount=1 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 -Djava.net.preferIPv4Stack=true -Dspring.jmx.enabled=false"
 
 echo "=== King-Detective 安装脚本 ==="
 echo "步骤 1: 检查环境..."
@@ -229,13 +229,14 @@ current_tg_chat_id="${current_tg_chat_id:-$(grep -E '^TG_CHAT_ID=' .env | tail -
 ensure_env "OPS_SSH_SECRET_KEY" "$current_admin_password"
 ensure_env "TELEGRAM_CHAT_ID" "$current_tg_chat_id"
 ensure_env "TELEGRAM_BOT_CHAT_ID" "$current_tg_chat_id"
+ensure_env "TELEGRAM_STARTUP_DELAY_SECONDS" "20"
 ensure_env "SERVER_ADDRESS" "0.0.0.0"
 ensure_env "SERVER_PORT" "9527"
 ensure_env "KING_DETECTIVE_GITHUB_REPOSITORY" "tony-wang1990/Wang-Detective"
 ensure_env "KING_DETECTIVE_GITHUB_BRANCH" "main"
 ensure_env "KING_DETECTIVE_IMAGE" "ghcr.io/tony-wang1990/wang-detective:main"
 ensure_env "JAVA_TOOL_OPTIONS" "$DEFAULT_JAVA_TOOL_OPTIONS"
-remove_env_word "JAVA_TOOL_OPTIONS" "-XX:TieredStopAtLevel=1"
+append_env_word "JAVA_TOOL_OPTIONS" "-XX:TieredStopAtLevel=1"
 append_env_word "JAVA_TOOL_OPTIONS" "-Dfile.encoding=UTF-8"
 append_env_word "JAVA_TOOL_OPTIONS" "-Dstdout.encoding=UTF-8"
 append_env_word "JAVA_TOOL_OPTIONS" "-Dstderr.encoding=UTF-8"
@@ -324,6 +325,7 @@ HEALTH_URL="http://127.0.0.1:9527/actuator/health/liveness"
 DETAIL_HEALTH_URL="http://127.0.0.1:9527/actuator/health"
 HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-900}"
 WAIT_STARTED_AT="$(date +%s)"
+PRESSURE_REPORTED=0
 while true; do
     HEALTH_BODY="$(curl -fsS --max-time 5 "$HEALTH_URL" 2>/dev/null || true)"
     if echo "$HEALTH_BODY" | grep -q '"status":"UP"'; then
@@ -348,6 +350,17 @@ while true; do
 
     CONTAINER_STATUS="$(docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' king-detective 2>/dev/null || true)"
     echo "  - 服务启动中... ${ELAPSED}s/${HEALTH_TIMEOUT_SECONDS}s ${CONTAINER_STATUS}"
+    if [ "$ELAPSED" -ge 120 ] && [ "$PRESSURE_REPORTED" -eq 0 ]; then
+        PRESSURE_REPORTED=1
+        echo "  - 启动超过 120 秒，输出主机资源诊断："
+        uptime || true
+        free -h || true
+        echo "----- CPU/内存占用最高进程 -----"
+        ps aux --sort=-%cpu | head -8 || true
+        echo "----- 容器资源占用 -----"
+        docker stats --no-stream king-detective king-detective-watcher || true
+        echo "  - 若 CPU 长期 100%、kswapd0 持续占用或可用内存低于 150MB，启动变慢来自主机资源争用。"
+    fi
     sleep 15
 done
 

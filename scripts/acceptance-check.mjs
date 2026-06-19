@@ -280,8 +280,22 @@ check('low-memory VPS health checks do not report false downtime', () => {
   assert(dockerfile.includes('/actuator/health/liveness'), 'Dockerfile must use the lightweight liveness endpoint');
   assert(compose.includes('start_period: 15m'), 'compose health check must allow slow 1C/1G startup');
   assert(compose.includes('/actuator/health/liveness'), 'compose must use the lightweight liveness endpoint');
-  assert(install.includes('remove_env_word "JAVA_TOOL_OPTIONS" "-XX:TieredStopAtLevel=1"'), 'install.sh must remove the legacy TieredStopAtLevel option');
+  assert(install.includes('append_env_word "JAVA_TOOL_OPTIONS" "-XX:TieredStopAtLevel=1"'), 'install.sh must keep the low-CPU startup compilation profile');
   assert(install.includes('HEALTH_URL="http://127.0.0.1:9527/actuator/health/liveness"'), 'install.sh must wait on the lightweight liveness endpoint');
+  assert(install.includes('启动超过 120 秒，输出主机资源诊断'), 'install.sh must diagnose host pressure during abnormally slow startup');
+});
+
+check('optional Telegram and AI modules do not block core web startup', () => {
+  const lazyConfig = read('src/main/java/com/tony/kingdetective/config/OptionalModuleLazyConfiguration.java');
+  const ociTask = read('src/main/java/com/tony/kingdetective/task/OciTask.java');
+  const pom = read('pom.xml');
+
+  assert(lazyConfig.includes('com.tony.kingdetective.telegram.handler.'), 'Telegram callback handlers must be lazy');
+  assert(lazyConfig.includes('com.tony.kingdetective.controller.AiChatController'), 'AI web module must be lazy');
+  assert(ociTask.includes('scheduleTgBotStartup()'), 'Telegram startup must be scheduled after core startup');
+  assert(ociTask.includes('callbackHandlerFactoryProvider.getObject()'), 'Telegram handlers must warm before the bot accepts callbacks');
+  assert(pom.includes('<artifactId>spring-ai-openai</artifactId>'), 'AI client library must remain available');
+  assert(!pom.includes('<artifactId>spring-ai-openai-spring-boot-starter</artifactId>'), 'unused AI auto-configuration starter must be removed');
 });
 
 check('remote smoke scripts cover required routes and endpoints', () => {
