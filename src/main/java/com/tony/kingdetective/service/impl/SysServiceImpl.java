@@ -236,10 +236,6 @@ public class SysServiceImpl implements ISysService {
                         case ENABLED_VERSION_UPDATE_NOTIFICATIONS:
                             ociKv.setValue(params.getEnableVersionInform().toString());
                             break;
-                        case SILICONFLOW_AI_API:
-                            ociKv.setValue(params.getGjAiApi());
-                            customCache.remove(SysCfgEnum.SILICONFLOW_AI_API.getCode());
-                            break;
                         case BOOT_BROADCAST_TOKEN:
                             ociKv.setValue(params.getBootBroadcastToken());
                             break;
@@ -309,7 +305,6 @@ public class SysServiceImpl implements ISysService {
         rsp.setDailyBroadcastCron(null == dbcValue ? CacheConstant.TASK_CRON : dbcValue);
         String evunValue = getCfgValue(SysCfgEnum.ENABLED_VERSION_UPDATE_NOTIFICATIONS);
         rsp.setEnableVersionInform(Boolean.valueOf(null == evunValue ? EnableEnum.ON.getCode() : evunValue));
-        rsp.setGjAiApi(getCfgValue(SysCfgEnum.SILICONFLOW_AI_API));
         rsp.setBootBroadcastToken(getCfgValue(SysCfgEnum.BOOT_BROADCAST_TOKEN));
         String ekaValue = getCfgValue(SysCfgEnum.ENABLE_OCI_KEEP_ALIVE);
         rsp.setEnableKeepAlive(Boolean.valueOf(null == ekaValue ? "false" : ekaValue));

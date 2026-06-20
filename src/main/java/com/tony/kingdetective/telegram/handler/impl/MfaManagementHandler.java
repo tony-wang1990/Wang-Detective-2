@@ -213,7 +213,6 @@ class MfaEnableHandler extends AbstractCallbackHandler {
             params.setEnableDailyBroadcast(sysCfg.getEnableDailyBroadcast());
             params.setDailyBroadcastCron(sysCfg.getDailyBroadcastCron());
             params.setEnableVersionInform(sysCfg.getEnableVersionInform());
-            params.setGjAiApi(sysCfg.getGjAiApi());
             params.setBootBroadcastToken(sysCfg.getBootBroadcastToken());
             
             sysService.updateSysCfg(params);
@@ -383,7 +382,6 @@ class MfaDisableHandler extends AbstractCallbackHandler {
             params.setEnableDailyBroadcast(sysCfg.getEnableDailyBroadcast());
             params.setDailyBroadcastCron(sysCfg.getDailyBroadcastCron());
             params.setEnableVersionInform(sysCfg.getEnableVersionInform());
-            params.setGjAiApi(sysCfg.getGjAiApi());
             params.setBootBroadcastToken(sysCfg.getBootBroadcastToken());
             
             sysService.updateSysCfg(params);
@@ -506,7 +504,6 @@ class MfaDeleteSecretConfirmHandler extends AbstractCallbackHandler {
             params.setEnableDailyBroadcast(sysCfg.getEnableDailyBroadcast());
             params.setDailyBroadcastCron(sysCfg.getDailyBroadcastCron());
             params.setEnableVersionInform(sysCfg.getEnableVersionInform());
-            params.setGjAiApi(sysCfg.getGjAiApi());
             params.setBootBroadcastToken(sysCfg.getBootBroadcastToken());
             
             sysService.updateSysCfg(params);

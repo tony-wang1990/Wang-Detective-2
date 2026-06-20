@@ -35,7 +35,6 @@ type SystemConfig = {
   enableDailyBroadcast: boolean;
   dailyBroadcastCron: string;
   enableVersionInform: boolean;
-  gjAiApi: string;
   bootBroadcastToken: string;
   enableGoogleLogin: boolean;
   googleClientId: string;
@@ -61,7 +60,6 @@ const cfg = reactive<SystemConfig>({
   enableDailyBroadcast: false,
   dailyBroadcastCron: '0 0 8 * * ?',
   enableVersionInform: true,
-  gjAiApi: '',
   bootBroadcastToken: '',
   enableGoogleLogin: false,
   googleClientId: '',
@@ -122,7 +120,6 @@ function assignConfig(next: Partial<SystemConfig>) {
     enableDailyBroadcast: Boolean(next.enableDailyBroadcast),
     dailyBroadcastCron: next.dailyBroadcastCron || '0 0 8 * * ?',
     enableVersionInform: Boolean(next.enableVersionInform),
-    gjAiApi: next.gjAiApi || '',
     bootBroadcastToken: next.bootBroadcastToken || '',
     enableGoogleLogin: Boolean(next.enableGoogleLogin),
     googleClientId: next.googleClientId || '',
@@ -159,7 +156,6 @@ async function saveCfg() {
       enableDailyBroadcast: cfg.enableDailyBroadcast,
       dailyBroadcastCron: cfg.dailyBroadcastCron,
       enableVersionInform: cfg.enableVersionInform,
-      gjAiApi: cfg.gjAiApi,
       bootBroadcastToken: cfg.bootBroadcastToken,
       enableGoogleLogin: cfg.enableGoogleLogin,
       googleClientId: cfg.googleClientId,
@@ -371,10 +367,6 @@ onMounted(() => {
           <label class="wd-switch-row wide">
             <input v-model="cfg.enableKeepAlive" type="checkbox" />
             <span>启用 OCI 实例自动保活 (SSH 心跳)</span>
-          </label>
-          <label class="wide">
-            <span>AI API Key（保留现有能力，不做体验升级）</span>
-            <input v-model="cfg.gjAiApi" autocomplete="new-password" type="password" placeholder="可选：硅基流动 / OpenAI 兼容 Key" />
           </label>
         </div>
       </div>

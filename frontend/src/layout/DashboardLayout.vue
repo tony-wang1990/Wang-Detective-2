@@ -2,7 +2,6 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
-  Bot,
   ClipboardList,
   DatabaseBackup,
   FileText,
@@ -60,7 +59,6 @@ const navItems = [
   { label: '救援中心', path: '/dashboard/rescue', icon: LifeBuoy },
   { label: '功能中心', path: '/dashboard/features', icon: ServerCog },
   { label: '运维终端', path: '/dashboard/ops-terminal', icon: Terminal },
-  { label: 'AI聊天室', path: '/dashboard/ai-chat', icon: Bot },
   { label: '服务日志', path: '/dashboard/ociLog', icon: FileText },
   { label: '操作审计', path: '/dashboard/ops-audit', icon: ShieldCheck },
   { label: '系统配置', path: '/dashboard/sysCfg', icon: Settings }

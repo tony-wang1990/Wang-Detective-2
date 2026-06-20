@@ -61,19 +61,6 @@ public class MarkdownFormatter {
     }
 
     /**
-     * 格式化 AI 回复内容（含 think 标签分离处理）
-     *
-     * @param response AI 原始响应
-     * @return MarkdownV2 格式化后的响应
-     */
-    public static String formatAiResponse(String response) {
-        if (response == null || response.isEmpty()) {
-            return response;
-        }
-        return formatMarkdown(response);
-    }
-
-    /**
      * 截断超长消息（Telegram 限制 4096 字符）
      *
      * @param text      原始文本

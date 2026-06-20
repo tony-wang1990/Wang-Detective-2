@@ -40,7 +40,7 @@ TELEGRAM_BOT_CHAT_ID=
 | Docker 部署与更新 | 已完成 | Compose v2、watcher、一键更新、健康等待、低配 JVM、持久化目录与运维脚本已接入 |
 | Vue 前端 | 已完成 | 登录、首页、配置、任务、风险、备份、救援、终端、日志、审计、系统配置等均为原生路由 |
 | OCI 核心管理 | 已完成待高危实测 | 配置、实例、电源、网络、安全规则、引导卷、Shape、IPv6、换 IP、500M 等调用真实 OCI SDK |
-| Telegram Bot | 已完成待线上复验 | 120 个按钮 callback 对应 160 个处理器；异常返回带功能名和错误编号 |
+| Telegram Bot | 已完成待线上复验 | 114 个按钮 callback 对应 155 个处理器模式；异常返回带功能名和错误编号 |
 | Web SSH/SFTP | 已完成 | 主机库、会话、重连、resize、命令模板、上传下载及危险操作确认已接入 |
 | 备份恢复 | 已完成待恢复演练 | 本地备份、Object Storage、Web 恢复、定时备份与 watcher 执行链已完成 |
 | 救援中心 | 已完成待专用机验收 | 一键自动救援、轻量检查、boot volume 救援与 netboot 实验入口已接入 |
@@ -63,6 +63,7 @@ TELEGRAM_BOT_CHAT_ID=
 - 备份、引导卷、VCN、租户、Cloudflare 等高危操作补充操作审计。
 - TG callback 异常返回功能名和错误编号，服务日志可按编号定位真实异常。
 - TG callback 校验增加空模式、重复模式和 Spring 实例化回归测试。
+- 删除使用价值较低的 AI 聊天页面、接口、TG 菜单、配置项和 Spring AI 依赖，普通 TG 文本改为引导使用明确的运维菜单。
 
 完整报告：[docs/CODE_AUDIT_REPORT.md](docs/CODE_AUDIT_REPORT.md)
 
@@ -70,9 +71,9 @@ TELEGRAM_BOT_CHAT_ID=
 
 - Java 21 / Maven：10 项测试通过。
 - Vue：TypeScript 检查与生产构建通过。
-- 后端 Controller：138 个端点。
+- 后端 Controller：135 个端点。
 - 前端 API：72 个调用，全部存在对应后端映射。
-- Telegram：120 个按钮 callback，160 个处理器模式，映射检查通过。
+- Telegram：114 个按钮 callback，155 个处理器模式，映射检查通过。
 - 静态验收：脚本、路由、乱码、README 链接、低配健康检查和发布守卫全部通过。
 
 ## 尚需真实环境验收

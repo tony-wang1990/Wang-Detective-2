@@ -68,9 +68,6 @@ ADMIN_USERNAME=admin
 ADMIN_PASSWORD=强密码请改掉
 OPS_SSH_SECRET_KEY=请设置为稳定随机密钥
 
-# OpenAI (可选)
-OPENAI_API_KEY=
-
 # Database
 DATABASE_PATH=/app/data/king-detective.db
 EOF
@@ -95,7 +92,6 @@ services:
       - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME}
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - ./data:/app/data        # 数据库
       - ./keys:/app/keys        # OCI密钥

@@ -22,7 +22,6 @@ public class UpdateSysCfgParams {
     private String dailyBroadcastCron;
     private Boolean enableVersionInform;
 
-    private String gjAiApi;
     private String bootBroadcastToken;
     private Boolean enableGoogleLogin;
     private String googleClientId;

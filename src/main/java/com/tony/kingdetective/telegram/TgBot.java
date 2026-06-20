@@ -4,7 +4,6 @@ import cn.hutool.extra.spring.SpringUtil;
 import com.tony.kingdetective.telegram.builder.KeyboardBuilder;
 import com.tony.kingdetective.telegram.factory.CallbackHandlerFactory;
 import com.tony.kingdetective.telegram.handler.CallbackHandler;
-import com.tony.kingdetective.telegram.service.AiChatService;
 import com.tony.kingdetective.telegram.service.SshService;
 import com.tony.kingdetective.telegram.service.TgAccountFlowService;
 import com.tony.kingdetective.telegram.service.TgSessionFlowService;
@@ -149,8 +148,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
             return;
         }
 
-        // 非命令消息，当作 AI 对话处理（已在内部使用异步）
-        handleAiChat(chatId, messageText);
+        sendMessage(chatId, "请使用 /menu 打开功能菜单，或使用 /help 查看命令。");
     }
 
     /**
@@ -516,35 +514,6 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         }
     }
 
-    /**
-     * 处理 AI 对话
-     */
-    private void handleAiChat(long chatId, String message) {
-        try {
-            // Send typing indicator
-            sendMessage(chatId, "🤔 思考中...", false);
-
-            // Call AI service asynchronously
-            AiChatService aiChatService = SpringUtil.getBean(AiChatService.class);
-            CompletableFuture<String> future = aiChatService.chat(chatId, message);
-
-            // Wait for response and send
-            future.thenAccept(response -> {
-                // Format response with proper Markdown
-                String formattedResponse = MarkdownFormatter.formatAiResponse(response);
-                sendMessage(chatId, formattedResponse, true);
-            }).exceptionally(ex -> {
-                log.error("AI chat failed", ex);
-                sendMessage(chatId, "❌ AI 对话失败: " + ex.getMessage(), false);
-                return null;
-            });
-
-        } catch (Exception e) {
-            log.error("Failed to handle AI chat", e);
-            sendMessage(chatId, "❌ 处理失败: " + e.getMessage(), false);
-        }
-    }
-
     // ==========================================
     // Account Addition Logic
     // ==========================================
@@ -728,9 +697,6 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
                         "├ `/terminal` - 打开 SSH/日志/诊断快捷入口\n" +
                         "├ `/rescue` - 打开救援中心\n" +
                         "├ `/backup` - 打开备份恢复\n\n" +
-                        "*AI 聊天：*\n" +
-                        "├ 直接发送消息即可与 AI 对话\n" +
-                        "├ 在主菜单选择 AI 聊天 进行设置\n\n" +
                         "*SSH 管理：*\n" +
                         "├ `/ssh_config host port user pwd` - 配置连接\n" +
                         "├ `/ssh 命令` - 执行 SSH 命令\n" +

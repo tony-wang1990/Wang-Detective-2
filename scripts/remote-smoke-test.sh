@@ -116,7 +116,6 @@ for route in \
   "/dashboard/rescue" \
   "/dashboard/features" \
   "/dashboard/ops-terminal" \
-  "/dashboard/ai-chat" \
   "/dashboard/ociLog" \
   "/dashboard/ops-audit" \
   "/dashboard/sysCfg"; do

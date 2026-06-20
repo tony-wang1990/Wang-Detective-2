@@ -20,7 +20,6 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <oci-version>3.77.2</oci-version>
         <spring-boot.version>3.4.1</spring-boot.version>
-        <spring-ai.version>1.0.0-M5</spring-ai.version>
         <mybatis-plus.version>3.5.10.1</mybatis-plus.version>
     </properties>
     <dependencies>
@@ -188,13 +187,6 @@
             <version>9.2.0</version>
         </dependency>
 
-        <!-- AI is created explicitly by DynamicChatClientFactory. Keep the client
-             library without the unused Spring Boot auto-configuration starter. -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-openai</artifactId>
-            <version>${spring-ai.version}</version>
-        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -209,13 +201,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
                 <version>${spring-boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework.ai</groupId>
-                <artifactId>spring-ai-bom</artifactId>
-                <version>${spring-ai.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -317,5 +302,4 @@
     <!--    </profiles>-->
 
 </project>
-
 

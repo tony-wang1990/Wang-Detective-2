@@ -86,7 +86,6 @@ check('acceptance matrix exists and covers current routes', () => {
     '/dashboard/rescue',
     '/dashboard/features',
     '/dashboard/ops-terminal',
-    '/dashboard/ai-chat',
     '/dashboard/ociLog',
     '/dashboard/ops-audit',
     '/dashboard/sysCfg'
@@ -285,17 +284,12 @@ check('low-memory VPS health checks do not report false downtime', () => {
   assert(install.includes('启动超过 120 秒，输出主机资源诊断'), 'install.sh must diagnose host pressure during abnormally slow startup');
 });
 
-check('optional Telegram and AI modules do not block core web startup', () => {
+check('optional Telegram modules do not block core web startup', () => {
   const lazyConfig = read('src/main/java/com/tony/kingdetective/config/OptionalModuleLazyConfiguration.java');
   const ociTask = read('src/main/java/com/tony/kingdetective/task/OciTask.java');
-  const pom = read('pom.xml');
-
   assert(lazyConfig.includes('com.tony.kingdetective.telegram.handler.'), 'Telegram callback handlers must be lazy');
-  assert(lazyConfig.includes('com.tony.kingdetective.controller.AiChatController'), 'AI web module must be lazy');
   assert(ociTask.includes('scheduleTgBotStartup()'), 'Telegram startup must be scheduled after core startup');
   assert(ociTask.includes('callbackHandlerFactoryProvider.getObject()'), 'Telegram handlers must warm before the bot accepts callbacks');
-  assert(pom.includes('<artifactId>spring-ai-openai</artifactId>'), 'AI client library must remain available');
-  assert(!pom.includes('<artifactId>spring-ai-openai-spring-boot-starter</artifactId>'), 'unused AI auto-configuration starter must be removed');
 });
 
 check('remote smoke scripts cover required routes and endpoints', () => {
@@ -311,7 +305,6 @@ check('remote smoke scripts cover required routes and endpoints', () => {
     '/dashboard/rescue',
     '/dashboard/features',
     '/dashboard/ops-terminal',
-    '/dashboard/ai-chat',
     '/dashboard/ociLog',
     '/dashboard/ops-audit',
     '/dashboard/sysCfg'

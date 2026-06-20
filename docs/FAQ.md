@@ -231,15 +231,6 @@ WEB_PASSWORD=新密码
 docker-compose restart
 ```
 
-#### Q: 如何禁用OpenAI功能？
-**A**:
-```bash
-# .env文件中留空或注释
-# OPENAI_API_KEY=
-```
-
----
-
 ### 🔄 更新
 
 #### Q: 如何更新到最新版本？

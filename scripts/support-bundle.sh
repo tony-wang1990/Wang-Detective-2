@@ -42,7 +42,6 @@ redact_stream() {
         -e 's#(TELEGRAM[^=]*CHAT_ID=)[^",[:space:]]+#\1***REDACTED***#g' \
         -e 's#(TG_CHAT_ID=)[^",[:space:]]+#\1***REDACTED***#g' \
         -e 's#(BOT_TOKEN=)[^",[:space:]]+#\1***REDACTED***#g' \
-        -e 's#(OPENAI_API_KEY=)[^",[:space:]]+#\1***REDACTED***#g' \
         -e 's#([Tt]oken[" ]*[:=][" ]*)[^",[:space:]]+#\1***REDACTED***#g' \
         -e 's#([Pp]assword[" ]*[:=][" ]*)[^",[:space:]]+#\1***REDACTED***#g' \
         -e 's#([Ss]ecret[-_ ]?[Kk]ey[" ]*[:=][" ]*)[^",[:space:]]+#\1***REDACTED***#g' \

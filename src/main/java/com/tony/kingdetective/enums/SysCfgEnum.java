@@ -27,7 +27,6 @@ public enum SysCfgEnum {
     ENABLE_DAILY_BROADCAST("Y107", "是否开启每日播报", SysCfgTypeEnum.SYS_INIT_CFG),
     DAILY_BROADCAST_CRON("Y108", "每日播报cron", SysCfgTypeEnum.SYS_INIT_CFG),
     ENABLED_VERSION_UPDATE_NOTIFICATIONS("Y109", "是否开启版本更新通知", SysCfgTypeEnum.SYS_INIT_CFG),
-    SILICONFLOW_AI_API("Y110", "硅基流动API", SysCfgTypeEnum.SYS_INIT_CFG),
     BOOT_BROADCAST_TOKEN("Y111", "开机播报Token", SysCfgTypeEnum.SYS_INIT_CFG),
     BOOT_BROADCAST_CHANNEL("Y114", "TG频道广播地址", SysCfgTypeEnum.SYS_INIT_CFG),
     SYS_VNC("Y112", "实例VNC连接url", SysCfgTypeEnum.SYS_INIT_CFG),

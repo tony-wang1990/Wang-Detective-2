@@ -97,8 +97,6 @@ docker run -d \
   -e ADMIN_USERNAME="$ADMIN_USERNAME" \
   -e ADMIN_PASSWORD="$ADMIN_PASSWORD" \
   -e TELEGRAM_BOT_TOKEN="$TELEGRAM_TOKEN" \
-  -e OPENAI_API_KEY="${OPENAI_API_KEY:-dummy}" \
-  -e OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://api.siliconflow.cn}" \
   -v "$DATA_DIR:/app/king-detective/data" \
   -v "$KEYS_DIR:/app/king-detective/keys" \
   -v "$LOGS_DIR:/var/log" \

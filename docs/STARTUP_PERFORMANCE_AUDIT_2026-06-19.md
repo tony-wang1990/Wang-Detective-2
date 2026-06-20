@@ -4,7 +4,7 @@
 
 本次 707 秒启动不是单一代码死循环，也不是 OCI API 在主启动线程中等待。
 直接原因是 1C/1G 主机长期处于 CPU 100%、高系统负载和频繁换页状态；
-代码侧原本又在 Spring 主启动链路中一次性创建 Telegram 回调和 AI 可选模块，
+代码侧原本又在 Spring 主启动链路中一次性创建 Telegram 回调和可选模块，
 两者叠加后把正常的 Bean 初始化时间放大到十几分钟。
 
 ## 服务器日志时间线
@@ -28,14 +28,14 @@
 - 未发现启动线程中的固定长时间 `sleep`。
 - OCI 实时网络请求主要在后台任务、用户操作或定时任务中执行，不阻塞 Tomcat 主初始化。
 - `CallbackHandlerFactory` 原来会促使约 160 个 Telegram 回调 Bean 在启动期创建。
-- AI 功能手工创建 `ChatClient`，却仍引入 Spring Boot AI Starter，产生了不必要的自动配置。
+- 已删除不再使用的 AI 聊天功能，避免额外客户端依赖和组件扫描。
 - 数据库连接建立约 4 秒，不是这次 707 秒的主因。
 
 ## 本次优化
 
-- Telegram handler、回调工厂和 AI 模块改为延迟初始化。
+- Telegram handler 和回调工厂改为延迟初始化。
 - Web 核心服务就绪后，默认延迟 20 秒在后台预热 Telegram handler 并启动 Bot。
-- `spring-ai-openai-spring-boot-starter` 改为轻量的 `spring-ai-openai` 客户端依赖。
+- 已移除未使用的 AI 聊天模块及其 Spring AI 依赖，进一步缩短依赖解析和启动扫描路径。
 - 新增启动性能日志，记录启动秒数、可用处理器、系统负载和 JVM 堆使用量。
 - 统一 1C/1G JVM 默认值，并使用 Tier 1 编译降低低配机启动期 JIT 压力。
 - 安装等待超过 120 秒时自动输出负载、内存、进程和容器资源诊断。

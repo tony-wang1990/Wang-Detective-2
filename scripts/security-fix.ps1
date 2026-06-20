@@ -50,8 +50,6 @@ TELEGRAM_BOT_TOKEN=$NEW_TOKEN
 ADMIN_USERNAME=$WEB_ACCOUNT
 ADMIN_PASSWORD=$WEB_PASSWORD
 
-# OpenAI API (Optional)
-OPENAI_API_KEY=
 "@
 
 Set-Content -Path ".env" -Value $envContent -Encoding UTF8

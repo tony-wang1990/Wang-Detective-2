@@ -7,7 +7,7 @@ Current scope:
 - Native Vue login page.
 - Native dashboard shell with sidebar, topbar, theme switch, and route outlet.
 - Native home page that reads the existing `/api/sys/glance` and `/actuator/health` data.
-- Native Vue routes for configuration list, task list, service logs, system config, AI chat, feature center, and ops terminal.
+- Native Vue routes for configuration list, task list, service logs, system config, feature center, and ops terminal.
 - A temporary `/legacy-dashboard.html` fallback for the old bundled UI while the new routes are tested in production.
 
 It now builds to `src/main/resources/dist` as the production frontend. `emptyOutDir` is disabled for this transition so the old bundled chunks remain available to `/legacy-dashboard.html` until the new Vue routes pass deployment testing.

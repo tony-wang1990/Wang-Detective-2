@@ -105,7 +105,7 @@
 
 - 系统诊断页面化，目前已有 API，后续可做前端面板。
 - 日志查询支持关键字、时间范围、下载。
-- 健康检查增加 Telegram、OCI SDK、Cloudflare、OpenAI 连通性。
+- 健康检查增加 Telegram、OCI SDK、Cloudflare 连通性。
 
 ### 4.5 安全
 

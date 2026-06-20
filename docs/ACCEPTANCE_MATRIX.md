@@ -41,7 +41,6 @@
 | `/dashboard/rescue` | 救援中心 | 安全边界、轻量自救、boot volume 向导、netboot 实验区说明 | 已验收一期 |
 | `/dashboard/features` | 功能中心 | 诊断、版本、入口跳转、旧页面迁移提示 | 已验收一期 |
 | `/dashboard/ops-terminal` | 运维终端 | 主机库、命令模板、Web SSH、SFTP、移动端不横向撑页 | 已验收一期 |
-| `/dashboard/ai-chat` | AI 聊天室 | 保留现状、错误提示、未配置 Key 的文案、发送按钮不被输入框撑高 | 已验收一期 |
 | `/dashboard/ociLog` | 服务日志 | WebSocket、暂停、筛选、错误统计、移动端滚动、最近日志 REST 兜底 | 历史日志接口已接入，WebSocket 待实测 |
 | `/dashboard/ops-audit` | 操作审计 | 搜索、筛选、详情、导出、空状态 | 已验收一期 |
 | `/dashboard/sysCfg` | 系统配置 | TG 配置识别、MFA、Google、测试消息、诊断、移动端按钮 | 已验收一期 |

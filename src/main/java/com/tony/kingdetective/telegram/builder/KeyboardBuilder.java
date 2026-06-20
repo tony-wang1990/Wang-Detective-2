@@ -179,10 +179,6 @@ public class KeyboardBuilder {
                         InlineKeyboardButton.builder()
                                 .text("🆘 救援中心")
                                 .callbackData("rescue_center")
-                                .build(),
-                        InlineKeyboardButton.builder()
-                                .text("AI聊天")
-                                .callbackData("ai_chat")
                                 .build()
                 ),
                 new InlineKeyboardRow(

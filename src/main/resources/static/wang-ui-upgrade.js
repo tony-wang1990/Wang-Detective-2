@@ -17,7 +17,6 @@
     '任务列表': 'task',
     '服务日志': 'log',
     '系统配置': 'system',
-    'AI聊天室': 'ai',
     '新版功能': 'features',
     '功能中心': 'features',
     '运维终端': 'terminal'
