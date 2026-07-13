@@ -289,6 +289,17 @@ apps/android/android/app/build/outputs/apk/debug/app-debug.apk
 node scripts/publish-client-package.mjs android apps/android/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
+### 客户端安装包同步
+
+GitHub 最新 Release 提供固定名称的 Windows 安装包、Android APK 和 SHA256 校验文件。一键安装和后续更新会自动把它们同步到 `deploy/downloads`。手动同步：
+
+```bash
+cd /app/king-detective
+bash scripts/sync-client-packages.sh
+```
+
+同步脚本会先下载 `.sha256` 文件，校验通过后再原子替换本地安装包。即使 VPS 本地文件尚未同步，下载中心也会回退到 GitHub Release 地址，不会禁用下载按钮。
+
 ## Telegram Bot
 
 Telegram 是可选入口。设置以下变量后重启服务：
@@ -331,6 +342,7 @@ bash scripts/maintenance.sh backup
 bash scripts/maintenance.sh verify-backup /path/to/backup.tar.gz
 bash scripts/maintenance.sh restore /path/to/backup.tar.gz
 bash scripts/maintenance.sh update
+bash scripts/maintenance.sh sync-clients
 bash scripts/maintenance.sh smoke
 bash scripts/maintenance.sh support
 ```

@@ -33,7 +33,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.datasource.url=jdbc:sqlite:target/king-detective-test-${random.uuid}.db",
         "king-detective.startup.tasks-enabled=false",
         "king-detective.websocket.server-endpoint-exporter-enabled=false",
-        "oci-cfg.key-dir-path=target/test-keys"
+        "oci-cfg.key-dir-path=target/test-keys",
+        "clients.download-dir=target/test-client-downloads-${random.uuid}"
 })
 class OciHelperApplicationTests {
 
@@ -142,6 +143,23 @@ class OciHelperApplicationTests {
     void actuatorLivenessRemainsPublic() throws Exception {
         mockMvc.perform(get("/actuator/health/liveness"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void clientCatalogFallsBackToReleaseAssetsWhenVpsPackagesAreMissing() throws Exception {
+        String token = adminCredentialService.generateToken(Map.of("account", adminCredentialService.getAccount()));
+
+        mockMvc.perform(get("/api/v1/clients/packages")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.packages[0].available").value(true))
+                .andExpect(jsonPath("$.data.packages[0].status").value("release"))
+                .andExpect(jsonPath("$.data.packages[0].source").value("github-release"))
+                .andExpect(jsonPath("$.data.packages[0].downloadUrl")
+                        .value(org.hamcrest.Matchers.containsString("/releases/latest/download/")))
+                .andExpect(jsonPath("$.data.packages[1].available").value(true))
+                .andExpect(jsonPath("$.data.packages[1].status").value("release"));
     }
 
     @Test

@@ -45,6 +45,7 @@ show_menu() {
 10) 部署冒烟检查
 11) 生成支持包
 12) 重启服务
+13) 同步 Windows/Android 安装包
 0) 退出
 MENU
     printf '请选择: '
@@ -71,6 +72,7 @@ case "$ACTION" in
                 10) run_script server-smoke-test.sh ;;
                 11) run_script support-bundle.sh ;;
                 12) compose up -d --force-recreate king-detective watcher ;;
+                13) run_script sync-client-packages.sh ;;
                 0) exit 0 ;;
                 *) echo "无效选择" ;;
             esac
@@ -102,6 +104,9 @@ case "$ACTION" in
     update)
         run_script update.sh "$@"
         ;;
+    sync-clients)
+        run_script sync-client-packages.sh "$@"
+        ;;
     rollback)
         run_script rollback.sh "$@"
         ;;
@@ -126,6 +131,7 @@ case "$ACTION" in
   bash scripts/maintenance.sh verify-backup /path/to/backup.tar.gz
   bash scripts/maintenance.sh restore /path/to/backup.tar.gz
   bash scripts/maintenance.sh update
+  bash scripts/maintenance.sh sync-clients
   bash scripts/maintenance.sh rollback ghcr.io/tony-wang1990/wang-detective-2:main
   bash scripts/maintenance.sh smoke
   bash scripts/maintenance.sh support

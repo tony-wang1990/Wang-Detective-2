@@ -12,6 +12,7 @@
 | `scripts/server-smoke-test.sh` | 部署后体检，检查容器、登录、健康、watcher、关键 API 和脚本 CR 字节 | 只读 |
 | `scripts/remote-smoke-test.sh` | 公网/域名远程验收，检查健康、登录、诊断、风险、VCN 和安全规则读接口 | 只读 |
 | `scripts/remote-smoke-test.mjs` | Node 版远程验收，支持 fetch/curl 自动回退 | 只读 |
+| `scripts/sync-client-packages.sh` | 从 GitHub Release 同步并校验 Windows/Android 安装包 | 会更新 `deploy/downloads` |
 | `scripts/backup.sh` | 备份 `.env`、配置、数据库、keys、scripts | 只创建备份 |
 | `scripts/restore.sh` | 从备份恢复配置、数据库、keys、scripts | 会覆盖当前部署文件 |
 | `scripts/update.sh` | 手动拉取镜像并重建服务 | 会重建容器 |

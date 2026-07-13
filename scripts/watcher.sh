@@ -86,6 +86,11 @@ run_update() {
   echo "[1/4] pulling image $IMAGE"
   docker compose pull "$SERVICE_NAME"
 
+  if [ -x "$APP_DIR/scripts/sync-client-packages.sh" ]; then
+    echo "synchronizing Windows and Android packages"
+    "$APP_DIR/scripts/sync-client-packages.sh" || echo "client package synchronization failed; core update continues"
+  fi
+
   echo "[2/4] recreating service"
   docker compose up -d --force-recreate "$SERVICE_NAME"
 

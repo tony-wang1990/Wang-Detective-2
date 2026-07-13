@@ -68,6 +68,15 @@ node scripts/publish-client-package.mjs android apps/android/android/app/build/o
 
 `docker-compose.yml` 已将本机 `deploy` 映射到容器 `/app/king-detective/deploy`。将固定名称的安装包及其 `.sha256` 文件放进 `deploy/downloads` 后，控制台的“客户端下载”页面会自动显示版本、大小、更新时间、校验值和下载按钮。
 
+默认从 GitHub 最新 Release 同步已验收的安装包：
+
+```bash
+cd /app/king-detective
+bash scripts/sync-client-packages.sh
+```
+
+一键安装、手动更新和 watcher 更新都会调用该脚本。VPS 本地包缺失时，后端还会将下载链接回退到公开 GitHub Release 资产。
+
 可用环境变量：
 
 ```env

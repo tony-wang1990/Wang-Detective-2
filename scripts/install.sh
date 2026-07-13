@@ -289,6 +289,7 @@ for script_name in \
     support-bundle.sh \
     maintenance.sh \
     setup-backup-cron.sh \
+    sync-client-packages.sh \
     verify-release.sh \
     remote-smoke-test.sh \
     remote-smoke-test.mjs
@@ -297,6 +298,11 @@ do
 done
 chmod +x scripts/*.sh
 echo "  - 运维脚本已同步"
+
+echo "  - 同步 Windows/Android 安装包..."
+if ! APP_DIR="/app/king-detective" scripts/sync-client-packages.sh; then
+    echo "  - 警告: 客户端安装包同步失败，不影响 Web 服务启动；可稍后手动重试"
+fi
 
 echo "步骤 4: 拉取最新镜像..."
 compose pull king-detective watcher || {

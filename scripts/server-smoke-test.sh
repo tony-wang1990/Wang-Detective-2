@@ -167,6 +167,7 @@ rollback.sh
 support-bundle.sh
 maintenance.sh
 setup-backup-cron.sh
+sync-client-packages.sh
 verify-release.sh
 "
 
@@ -196,6 +197,15 @@ for script_name in $EXPECTED_SCRIPTS; do
         fi
     else
         fail "运维脚本缺失: $script_path"
+    fi
+done
+
+for package_name in wang-detective-latest.apk Wang-Detective-Setup-latest.exe; do
+    package_path="deploy/downloads/${package_name}"
+    if [ -s "$package_path" ] && [ -s "${package_path}.sha256" ]; then
+        pass "客户端安装包及校验文件已就绪: $package_name"
+    else
+        warn "客户端安装包未同步到 VPS: $package_name；可运行 bash scripts/sync-client-packages.sh"
     fi
 done
 

@@ -41,6 +41,7 @@ const WEB_ROUTES = [
   '/dashboard/risk',
   '/dashboard/backups',
   '/dashboard/rescue',
+  '/dashboard/clients',
   '/dashboard/features',
   '/dashboard/ops-terminal',
   '/dashboard/ociLog',
@@ -234,6 +235,13 @@ async function main() {
   if (token) {
     await check('diagnostics', 'GET', '/api/v1/system/diagnostics', undefined, (payload) => Array.isArray(envelopeData(payload)?.checks));
     await check('version-info', 'GET', '/api/v1/system/version-info', undefined, (payload) => Boolean(envelopeData(payload)?.currentVersion));
+    await check('client-packages', 'GET', '/api/v1/clients/packages', undefined, (payload) => {
+      const packages = envelopeData(payload)?.packages;
+      if (!Array.isArray(packages)) return false;
+      const nativePackages = packages.filter((item) => item?.id === 'android' || item?.id === 'windows');
+      return nativePackages.length === 2
+        && nativePackages.every((item) => item.available === true && Boolean(item.downloadUrl));
+    });
     await check('glance', 'GET', '/api/sys/glance', undefined, (payload) => typeof envelopeData(payload) === 'object');
     await check('sys-config', 'POST', '/api/sys/getSysCfg', undefined, (payload) => typeof envelopeData(payload) === 'object');
     const userPage = await check('oci-user-page', 'POST', '/api/oci/userPage', { currentPage: 1, pageSize: 5 }, (payload) => Array.isArray(envelopeData(payload)?.records));

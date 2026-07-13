@@ -245,6 +245,8 @@ check('remote smoke test script parses', () => {
 
 check('install and server smoke include remote smoke helpers', () => {
   const install = read('scripts/install.sh');
+  const update = read('scripts/update.sh');
+  const watcher = read('scripts/watcher.sh');
   const serverSmoke = read('scripts/server-smoke-test.sh');
   const helpers = ['remote-smoke-test.sh', 'remote-smoke-test.mjs'];
   for (const helper of helpers) {
@@ -252,6 +254,10 @@ check('install and server smoke include remote smoke helpers', () => {
   }
   assert(serverSmoke.includes('EXPECTED_NODE_HELPERS'), 'server-smoke-test.sh must declare Node helper checks');
   assert(serverSmoke.includes('remote-smoke-test.mjs'), 'server-smoke-test.sh must check remote-smoke-test.mjs presence');
+  assert(install.includes('sync-client-packages.sh'), 'install.sh must sync client release packages');
+  assert(update.includes('sync-client-packages.sh'), 'update.sh must sync client release packages');
+  assert(watcher.includes('sync-client-packages.sh'), 'watcher updates must sync client release packages');
+  assert(serverSmoke.includes('sync-client-packages.sh'), 'server smoke must check the client package sync helper');
 });
 
 check('Docker and install paths force UTF-8 text encoding', () => {
@@ -329,6 +335,7 @@ check('remote smoke scripts cover required routes and endpoints', () => {
     '/dashboard/risk',
     '/dashboard/backups',
     '/dashboard/rescue',
+    '/dashboard/clients',
     '/dashboard/features',
     '/dashboard/ops-terminal',
     '/dashboard/ociLog',
@@ -341,6 +348,7 @@ check('remote smoke scripts cover required routes and endpoints', () => {
     'legacy-terminal-redirect',
     'diagnostics',
     'version-info',
+    'client-packages',
     'glance',
     'sys-config',
     'oci-user-page',

@@ -22,6 +22,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/clients")
 public class ClientPackageController {
 
+    private static final String DEFAULT_RELEASE_REPOSITORY = "tony-wang1990/Wang-Detective-2";
     private static final String ANDROID_FILE = "wang-detective-latest.apk";
     private static final String WINDOWS_FILE = "Wang-Detective-Setup-latest.exe";
 
@@ -30,6 +31,9 @@ public class ClientPackageController {
 
     @Value("${clients.version:0.1.0}")
     private String clientVersion;
+
+    @Value("${clients.release-repository:" + DEFAULT_RELEASE_REPOSITORY + "}")
+    private String releaseRepository;
 
     @GetMapping("/packages")
     public ResponseData<Map<String, Object>> packages(HttpServletRequest request) {
@@ -74,7 +78,7 @@ public class ClientPackageController {
                                             String version,
                                             List<String> notes) {
         Path file = Paths.get(clientDownloadDir, fileName).normalize();
-        boolean available = Files.isRegularFile(file);
+        boolean localAvailable = Files.isRegularFile(file);
 
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("id", id);
@@ -82,11 +86,14 @@ public class ClientPackageController {
         item.put("platform", platform);
         item.put("version", version);
         item.put("fileName", fileName);
-        item.put("downloadUrl", serverBaseUrl + "/downloads/" + fileName);
-        item.put("available", available);
-        item.put("status", available ? "available" : "missing");
+        item.put("downloadUrl", localAvailable
+                ? serverBaseUrl + "/downloads/" + fileName
+                : releaseAssetUrl(fileName));
+        item.put("available", true);
+        item.put("status", localAvailable ? "available" : "release");
+        item.put("source", localAvailable ? "vps" : "github-release");
         item.put("notes", notes);
-        if (available) {
+        if (localAvailable) {
             try {
                 item.put("sizeBytes", Files.size(file));
                 item.put("updatedAt", Instant.ofEpochMilli(Files.getLastModifiedTime(file).toMillis()).toString());
@@ -97,6 +104,14 @@ public class ClientPackageController {
             }
         }
         return item;
+    }
+
+    private String releaseAssetUrl(String fileName) {
+        String repository = releaseRepository == null ? "" : releaseRepository.trim();
+        if (!repository.matches("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")) {
+            repository = DEFAULT_RELEASE_REPOSITORY;
+        }
+        return "https://github.com/" + repository + "/releases/latest/download/" + fileName;
     }
 
     private Map<String, Object> webPackage(String serverBaseUrl, String version) {

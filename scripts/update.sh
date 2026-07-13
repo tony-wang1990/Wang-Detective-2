@@ -107,6 +107,11 @@ set_env_value KING_DETECTIVE_IMAGE "$IMAGE"
 log "拉取镜像..."
 compose pull king-detective watcher
 
+if [ -x scripts/sync-client-packages.sh ]; then
+    log "同步 Windows/Android 安装包..."
+    scripts/sync-client-packages.sh || warn "客户端安装包同步失败，已继续更新核心服务"
+fi
+
 log "重建服务..."
 compose up -d --force-recreate king-detective watcher
 

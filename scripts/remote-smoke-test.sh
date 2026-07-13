@@ -114,6 +114,7 @@ for route in \
   "/dashboard/risk" \
   "/dashboard/backups" \
   "/dashboard/rescue" \
+  "/dashboard/clients" \
   "/dashboard/features" \
   "/dashboard/ops-terminal" \
   "/dashboard/ociLog" \
@@ -130,6 +131,7 @@ fi
 if [[ -n "$TOKEN" ]]; then
   request "diagnostics" "GET" "/api/v1/system/diagnostics" "" '"checks"[[:space:]]*:' || true
   request "version-info" "GET" "/api/v1/system/version-info" "" '"currentVersion"[[:space:]]*:' || true
+  request "client-packages" "GET" "/api/v1/clients/packages" "" '"available"[[:space:]]*:[[:space:]]*true' || true
   request "glance" "GET" "/api/sys/glance" "" "" || true
   request "sys-config" "POST" "/api/sys/getSysCfg" "" "" || true
   request "oci-user-page" "POST" "/api/oci/userPage" '{"currentPage":1,"pageSize":5}' '"records"[[:space:]]*:' || true
