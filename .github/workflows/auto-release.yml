@@ -48,27 +48,28 @@ jobs:
           echo "current_version=$version" >> $GITHUB_OUTPUT
           echo "Current version from pom.xml: $version"
       
-      - name: Calculate new version
+      - name: Prepare release version
         id: calc_version
         run: |
           current_version="${{ steps.get_version.outputs.current_version }}"
-          # Split semantic version: 4.1.1 -> major=4, minor=1, patch=1
-          IFS='.' read -r major minor patch <<< "$current_version"
-          # Increment patch version
-          new_patch=$((patch + 1))
-          new_version="${major}.${minor}.${new_patch}"
-          new_tag="v${new_version}"
-          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
-          echo "new_version=$new_version" >> $GITHUB_OUTPUT
-          echo "New version: $new_tag (from v$current_version)"
+          release_tag="v${current_version}"
+          echo "release_tag=$release_tag" >> $GITHUB_OUTPUT
+          if git rev-parse -q --verify "refs/tags/${release_tag}" >/dev/null; then
+            echo "release_exists=true" >> $GITHUB_OUTPUT
+            echo "Release tag already exists: $release_tag"
+          else
+            echo "release_exists=false" >> $GITHUB_OUTPUT
+            echo "Release tag to create: $release_tag"
+          fi
       
       - name: Create GitHub Release
+        if: steps.calc_version.outputs.release_exists != 'true'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.calc_version.outputs.new_tag }}
-          name: Release ${{ steps.calc_version.outputs.new_tag }}
+          tag_name: ${{ steps.calc_version.outputs.release_tag }}
+          name: Release ${{ steps.calc_version.outputs.release_tag }}
           body: |
-            🎉 自动发布版本 ${{ steps.calc_version.outputs.new_tag }}
+            🎉 自动发布版本 ${{ steps.calc_version.outputs.release_tag }}
             
             ## 更新内容
             最新提交: ${{ github.event.head_commit.message }}

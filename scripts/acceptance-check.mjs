@@ -195,6 +195,13 @@ check('README local links and images exist', () => {
   assert(!missing.length, `README local links/images missing: ${missing.join(', ')}`);
 });
 
+check('release workflow publishes the project version without a synthetic bump', () => {
+  const workflow = read('.github/workflows/auto-release.yml');
+  assert(workflow.includes('release_tag="v${current_version}"'), 'release tag must match the pom.xml version');
+  assert(workflow.includes('release_exists=true'), 'release workflow must skip an existing version tag');
+  assert(!workflow.includes('new_patch='), 'release workflow must not increment the patch version outside pom.xml');
+});
+
 check('frontend does not use native browser dialogs', () => {
   const targets = walk('frontend/src', (full) => full.endsWith('.vue') || full.endsWith('.ts'));
   const nativeDialog = /window\.(alert|confirm|prompt)|\b(alert|confirm|prompt)\(/;
