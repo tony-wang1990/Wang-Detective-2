@@ -1,0 +1,51 @@
+{
+  "name": "wang-detective-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/main.cjs",
+  "description": "Wang Detective Windows desktop client",
+  "author": "Tony Wang",
+  "scripts": {
+    "prepare:web": "node scripts/prepare-web.mjs",
+    "dev": "npm run prepare:web && electron .",
+    "pack": "npm run prepare:web && electron-builder --dir",
+    "dist": "npm run dist:win",
+    "dist:win": "npm run prepare:web && electron-builder --win nsis",
+    "dist:portable": "npm run prepare:web && electron-builder --win portable --config.win.artifactName=Wang-Detective-Portable-${version}.${ext}"
+  },
+  "devDependencies": {
+    "electron": "42.3.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.tony.wangdetective",
+    "productName": "Wang Detective",
+    "copyright": "Copyright © 2026 Tony Wang",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "web/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "src/main.cjs"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false,
+      "artifactName": "Wang-Detective-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "shortcutName": "Wang Detective"
+    }
+  }
+}

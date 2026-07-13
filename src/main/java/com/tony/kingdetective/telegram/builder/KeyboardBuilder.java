@@ -196,7 +196,7 @@ public class KeyboardBuilder {
                                 .build(),
                         InlineKeyboardButton.builder()
                                 .text("开源地址（帮忙点点star⭐）")
-                                .url("https://github.com/tony-wang1990/Wang-Detective")
+                                .url("https://github.com/tony-wang1990/Wang-Detective-2")
                                 .build()
                 ),
 

@@ -25,6 +25,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
@@ -181,6 +182,22 @@ class OciHelperApplicationTests {
                     .as("duplicate callback pattern: %s", pattern)
                     .isTrue();
         });
+    }
+
+    @Test
+    void clientFeatureGatewayRequiresAdminTokenAndExposesAllHandlers() throws Exception {
+        int handlerCount = applicationContext.getBeansOfType(CallbackHandler.class).size();
+        String token = adminCredentialService.generateToken(Map.of("account", adminCredentialService.getAccount()));
+
+        mockMvc.perform(get("/api/v1/client-features/menu"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/client-features/menu")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.registeredHandlerCount").value(handlerCount))
+                .andExpect(jsonPath("$.data.buttons").isArray());
     }
 
     @Test

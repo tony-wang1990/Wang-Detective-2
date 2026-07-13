@@ -11,7 +11,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 CONTAINER_NAME="king-detective"
-OLD_IMAGE="ghcr.io/tony-wang1990/wang-detective:main"
+OLD_IMAGE="ghcr.io/tony-wang1990/wang-detective-2:main"
 PORT="9527"
 
 echo -e "${YELLOW}================================${NC}"

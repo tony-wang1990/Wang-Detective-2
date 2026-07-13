@@ -2,7 +2,7 @@
 
 ## 1. 最初诉求回顾
 
-最初目标是把原始 King-Detective/OCI 管理项目下载到本地，全面检查、修复、优化，并参考同类 R-Bot / java_oci_manage 方向补齐更实用的功能。新版本代码需要独立上传到 `tony-wang1990/Wang-Detective` 仓库。
+最初目标是把原始 King-Detective/OCI 管理项目下载到本地，全面检查、修复、优化，并参考同类 R-Bot / java_oci_manage 方向补齐更实用的功能。新版本代码需要独立上传到 `tony-wang1990/Wang-Detective-2` 仓库。
 
 优先级大致分为三层：
 

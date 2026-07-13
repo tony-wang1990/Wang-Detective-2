@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.*;
 
+import java.nio.file.Paths;
 import java.util.Arrays;
 
 /**
@@ -19,6 +20,9 @@ public class CrossDomainFilter implements WebMvcConfigurer {
 
     @Value("${web.cors.allowed-origins:*}")
     private String allowedOrigins;
+
+    @Value("${clients.download-dir:/app/king-detective/deploy/downloads}")
+    private String clientDownloadDir;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -42,6 +46,12 @@ public class CrossDomainFilter implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/downloads/**")
+                .addResourceLocations(Paths.get(clientDownloadDir)
+                        .toAbsolutePath()
+                        .normalize()
+                        .toUri()
+                        .toString());
         registry.addResourceHandler("/**")
                 .addResourceLocations("classpath:/static/", "classpath:/dist/");
     }

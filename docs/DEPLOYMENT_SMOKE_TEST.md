@@ -15,7 +15,7 @@ bash scripts/server-smoke-test.sh
 
 ```bash
 cd /app/king-detective
-wget -qO scripts/server-smoke-test.sh https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/scripts/server-smoke-test.sh
+wget -qO scripts/server-smoke-test.sh https://raw.githubusercontent.com/tony-wang1990/Wang-Detective-2/main/scripts/server-smoke-test.sh
 chmod +x scripts/server-smoke-test.sh
 bash scripts/server-smoke-test.sh
 ```
@@ -23,7 +23,7 @@ bash scripts/server-smoke-test.sh
 也可以用单行命令：
 
 ```bash
-bash <(wget -qO- https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/scripts/server-smoke-test.sh)
+bash <(wget -qO- https://raw.githubusercontent.com/tony-wang1990/Wang-Detective-2/main/scripts/server-smoke-test.sh)
 ```
 
 脚本默认检查 `http://127.0.0.1:9527`。如果部署目录或端口不同，可以指定：
@@ -175,7 +175,7 @@ ls -l /app/king-detective/runtime/watcher_heartbeat
 如果 watcher 缺失，重新运行安装脚本即可：
 
 ```bash
-bash <(wget -qO- https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/scripts/install.sh)
+bash <(wget -qO- https://raw.githubusercontent.com/tony-wang1990/Wang-Detective-2/main/scripts/install.sh)
 ```
 
 ### 公网 IP 正常但域名 504
@@ -228,5 +228,5 @@ docker compose up -d --force-recreate
 cd /app/king-detective
 cp docker-compose.yml docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)
 rm -f docker-compose.yml
-bash <(wget -qO- https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/scripts/install.sh)
+bash <(wget -qO- https://raw.githubusercontent.com/tony-wang1990/Wang-Detective-2/main/scripts/install.sh)
 ```

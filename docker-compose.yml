@@ -10,14 +10,14 @@ services:
       - ./scripts/watcher.sh:/scripts/watcher.sh:ro
     environment:
       - TZ=Asia/Shanghai
-      - KING_DETECTIVE_GITHUB_REPOSITORY=${KING_DETECTIVE_GITHUB_REPOSITORY:-tony-wang1990/Wang-Detective}
+      - KING_DETECTIVE_GITHUB_REPOSITORY=${KING_DETECTIVE_GITHUB_REPOSITORY:-tony-wang1990/Wang-Detective-2}
       - KING_DETECTIVE_GITHUB_BRANCH=${KING_DETECTIVE_GITHUB_BRANCH:-main}
-      - KING_DETECTIVE_IMAGE=${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective:main}
+      - KING_DETECTIVE_IMAGE=${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective-2:main}
     networks:
       - app-network
 
   king-detective:
-    image: ${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective:main}
+    image: ${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective-2:main}
     container_name: king-detective
     restart: always
     environment:
@@ -27,7 +27,7 @@ services:
       - OPS_SSH_SECRET_KEY=${OPS_SSH_SECRET_KEY:-${ADMIN_PASSWORD:-admin123456}}
       - SERVER_ADDRESS=${SERVER_ADDRESS:-0.0.0.0}
       - SERVER_PORT=${SERVER_PORT:-9527}
-      - KING_DETECTIVE_GITHUB_REPOSITORY=${KING_DETECTIVE_GITHUB_REPOSITORY:-tony-wang1990/Wang-Detective}
+      - KING_DETECTIVE_GITHUB_REPOSITORY=${KING_DETECTIVE_GITHUB_REPOSITORY:-tony-wang1990/Wang-Detective-2}
       - KING_DETECTIVE_GITHUB_BRANCH=${KING_DETECTIVE_GITHUB_BRANCH:-main}
       # JVM defaults for 1C/1G VPS. Tier 1 compilation favors startup latency for this I/O-heavy service.
       - "JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS:--Xms96m -Xmx384m -XX:MaxMetaspaceSize=192m -XX:ActiveProcessorCount=1 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 -Djava.net.preferIPv4Stack=true -Dspring.jmx.enabled=false}"
@@ -37,6 +37,8 @@ services:
       - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-king_detective_bot}
       - TELEGRAM_STARTUP_DELAY_SECONDS=${TELEGRAM_STARTUP_DELAY_SECONDS:-20}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
+      - CLIENT_DOWNLOAD_DIR=${CLIENT_DOWNLOAD_DIR:-/app/king-detective/deploy/downloads}
+      - KING_DETECTIVE_CLIENT_VERSION=${KING_DETECTIVE_CLIENT_VERSION:-0.1.0}
     ports:
       - "9527:9527"
     volumes:
@@ -44,6 +46,7 @@ services:
       - ./data:/app/king-detective/data
       - ./keys:/app/king-detective/keys
       - ./backups:/app/king-detective/backups
+      - ./deploy:/app/king-detective/deploy
       - ./scripts:/app/king-detective/scripts:ro
       - ./logs:/var/log
       - ./runtime:/app/king-detective/runtime

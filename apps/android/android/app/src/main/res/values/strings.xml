@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Wang Detective</string>
+    <string name="title_activity_main">Wang Detective</string>
+    <string name="package_name">com.tony.wangdetective</string>
+    <string name="custom_url_scheme">com.tony.wangdetective</string>
+</resources>

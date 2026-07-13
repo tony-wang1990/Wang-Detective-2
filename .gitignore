@@ -46,6 +46,7 @@ target/
 build/
 out/
 *.jar
+!apps/android/android/gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
 *.class
@@ -76,6 +77,7 @@ keys/
 *.cer
 *.p12
 *.jks
+*.keystore
 
 # ==========================
 # Docker
@@ -95,3 +97,17 @@ desktop.ini
 node_modules/
 package-lock.json
 !frontend/package-lock.json
+!apps/desktop/package-lock.json
+!apps/android/package-lock.json
+
+# ==========================
+# Native Client Output
+# ==========================
+apps/desktop/web/
+apps/desktop/release/
+!apps/desktop/build/
+!apps/desktop/build/icon.png
+!apps/desktop/build/icon.ico
+apps/android/www/
+deploy/downloads/*
+!deploy/downloads/.gitkeep

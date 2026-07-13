@@ -1,4 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router';
+import { hasServerBaseUrl, isNativeClient } from '../runtime/client';
 
 const DashboardLayout = () => import('../layout/DashboardLayout.vue');
 const LoginView = () => import('../views/LoginView.vue');
@@ -13,9 +14,12 @@ const OpsTerminalView = () => import('../views/OpsTerminalView.vue');
 const RiskDashboardView = () => import('../views/RiskDashboardView.vue');
 const BackupArchiveView = () => import('../views/BackupArchiveView.vue');
 const RescueCenterView = () => import('../views/RescueCenterView.vue');
+const ClientDownloadView = () => import('../views/ClientDownloadView.vue');
+const FullFeatureView = () => import('../views/FullFeatureView.vue');
+const InfrastructureToolsView = () => import('../views/InfrastructureToolsView.vue');
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: isNativeClient() ? createWebHashHistory() : createWebHistory(),
   routes: [
     { path: '/', redirect: '/login' },
     { path: '/login', component: LoginView },
@@ -31,6 +35,9 @@ const router = createRouter({
         { path: 'risk', component: RiskDashboardView },
         { path: 'backups', component: BackupArchiveView },
         { path: 'rescue', component: RescueCenterView },
+        { path: 'clients', component: ClientDownloadView },
+        { path: 'all-features', component: FullFeatureView },
+        { path: 'infrastructure', component: InfrastructureToolsView },
         { path: 'ociLog', component: ServiceLogView },
         { path: 'ops-audit', component: OpsAuditView },
         { path: 'sysCfg', component: SystemConfigView },
@@ -44,7 +51,10 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const hasToken = Boolean(sessionStorage.getItem('token'));
-  if (to.path === '/login' && hasToken) {
+  if (isNativeClient() && !hasServerBaseUrl() && to.path !== '/login') {
+    return '/login';
+  }
+  if (to.path === '/login' && hasToken && hasServerBaseUrl()) {
     return '/dashboard/home';
   }
   if (to.matched.some((record) => record.meta.requiresAuth) && !hasToken) {

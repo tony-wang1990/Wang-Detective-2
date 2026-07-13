@@ -20,7 +20,7 @@
 
 | 模块 | 最初/既定目标 | 当前完成情况 | 状态 |
 | --- | --- | --- | --- |
-| 新仓库 | 单独创建增强版仓库存放代码 | 已推送到 `tony-wang1990/Wang-Detective` | 已完成 |
+| 新仓库 | 单独创建增强版仓库存放代码 | 已推送到 `tony-wang1990/Wang-Detective-2` | 已完成 |
 | Docker 部署 | 一键脚本可部署 | 修复镜像引用、持久化目录、低配 JVM、IPv4 监听、健康检查、watcher 默认部署 | 已完成 |
 | Compose 兼容 | 能兼容服务器环境 | 修复 `docker-compose 1.29.x` 的 `ContainerConfig` 问题，清理残留容器 | 已完成 |
 | 启动验证 | Java 21 + Maven / Docker 跑通 | 服务器已启动，健康检查 `UP`，数据库连接正常 | 已完成 |

@@ -228,10 +228,10 @@ else
 fi
 
 if [ -f docker-compose.yml ]; then
-    if grep -q 'ghcr.io/tony-wang1990/wang-detective:main' docker-compose.yml; then
+    if grep -q 'ghcr.io/tony-wang1990/wang-detective-2:main' docker-compose.yml; then
         pass "compose 使用 Wang-Detective GHCR 镜像"
     else
-        warn "compose 镜像不是 ghcr.io/tony-wang1990/wang-detective:main，请确认是否为自定义部署"
+        warn "compose 镜像不是 ghcr.io/tony-wang1990/wang-detective-2:main，请确认是否为自定义部署"
     fi
     if grep -q 'king-detective-watcher' docker-compose.yml; then
         pass "compose 已包含自动更新 watcher"

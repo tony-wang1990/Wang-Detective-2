@@ -246,7 +246,7 @@ async function updateAdminCredential() {
     credentialForm.confirmPassword = '';
     window.setTimeout(() => {
       sessionStorage.clear();
-      window.location.href = '/login';
+      window.location.href = window.location.href.includes('#') ? '#/login' : '/login';
     }, 900);
   } catch (err) {
     notice.value = err instanceof Error ? err.message : '更新登录账号密码失败';

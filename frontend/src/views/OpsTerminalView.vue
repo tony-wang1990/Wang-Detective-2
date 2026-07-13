@@ -2,6 +2,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { Copy, Download, FilePenLine, FolderPlus, FolderOpen, ListChecks, Play, RefreshCw, Save, Server, Square, Terminal, Trash2, Upload, Wifi, Zap } from 'lucide-vue-next';
 import { opsDelete, opsDownloadWithProgress, opsGet, opsPost, opsPut, opsUploadWithProgress, type TransferProgress } from '../api/http';
+import { websocketUrl } from '../runtime/client';
+import { saveBlob } from '../runtime/fileTransfer';
 
 type Host = {
   id?: string;
@@ -627,8 +629,7 @@ function disconnectTerminal() {
 
 function terminalUrl(websocketPath: string) {
   const token = sessionStorage.getItem('token') || '';
-  const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${scheme}//${window.location.host}${websocketPath}?token=${encodeURIComponent(token)}`;
+  return websocketUrl(`${websocketPath}?token=${encodeURIComponent(token)}`);
 }
 
 function sendTerminalResize() {
@@ -835,13 +836,8 @@ async function downloadSftpFile(path = selectedSftpPath.value || editorPath.valu
       credential: credential(),
       path
     }, updateTransfer);
-    const url = URL.createObjectURL(result.blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = downloadName(path, result.filename);
-    anchor.click();
-    URL.revokeObjectURL(url);
-    finishTransfer('文件下载已触发');
+    await saveBlob(result.blob, downloadName(path, result.filename));
+    finishTransfer('文件已交给系统保存或分享');
   } catch (error) {
     transfer.active = false;
     status.value = errorMessage(error);

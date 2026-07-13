@@ -107,13 +107,13 @@ bash scripts/update.sh
 默认会先备份，再拉取：
 
 ```text
-ghcr.io/tony-wang1990/wang-detective:main
+ghcr.io/tony-wang1990/wang-detective-2:main
 ```
 
 指定镜像：
 
 ```bash
-KING_DETECTIVE_IMAGE=ghcr.io/tony-wang1990/wang-detective:main bash scripts/update.sh
+KING_DETECTIVE_IMAGE=ghcr.io/tony-wang1990/wang-detective-2:main bash scripts/update.sh
 ```
 
 更新后如需自动跑体检：
@@ -135,7 +135,7 @@ runtime/last_image_before_update
 
 ```bash
 cd /app/king-detective
-bash scripts/rollback.sh ghcr.io/tony-wang1990/wang-detective:main
+bash scripts/rollback.sh ghcr.io/tony-wang1990/wang-detective-2:main
 ```
 
 如果刚刚通过 `scripts/update.sh` 更新过，脚本会记录更新前镜像到：
@@ -149,7 +149,7 @@ runtime/last_image_before_update
 回滚后如需自动跑体检：
 
 ```bash
-RUN_SMOKE_AFTER_ROLLBACK=1 bash scripts/rollback.sh ghcr.io/tony-wang1990/wang-detective:main
+RUN_SMOKE_AFTER_ROLLBACK=1 bash scripts/rollback.sh ghcr.io/tony-wang1990/wang-detective-2:main
 ```
 
 回滚成功后会写入：
@@ -231,7 +231,7 @@ bash scripts/maintenance.sh health
 bash scripts/maintenance.sh backup
 bash scripts/maintenance.sh verify-backup /path/to/backup.tar.gz
 bash scripts/maintenance.sh update
-bash scripts/maintenance.sh rollback ghcr.io/tony-wang1990/wang-detective:main
+bash scripts/maintenance.sh rollback ghcr.io/tony-wang1990/wang-detective-2:main
 bash scripts/maintenance.sh smoke
 bash scripts/maintenance.sh support
 ```

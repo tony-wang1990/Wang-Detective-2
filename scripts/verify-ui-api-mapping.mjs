@@ -29,7 +29,7 @@ function controllerEndpoints() {
   const files = walk(controllerDir, (file) => file.endsWith('.java'));
   const endpoints = new Set();
   const classMappingRe = /@RequestMapping\s*\(\s*(?:path\s*=\s*)?"([^"]+)"/;
-  const methodMappingRe = /@(GetMapping|PostMapping|PutMapping|DeleteMapping|RequestMapping)\s*(?:\(\s*(?:path\s*=\s*)?"([^"]*)")?/g;
+  const methodMappingRe = /@(GetMapping|PostMapping|PutMapping|DeleteMapping)\s*(?:\(\s*(?:path\s*=\s*)?"([^"]*)")?/g;
 
   for (const file of files) {
     const text = fs.readFileSync(file, 'utf8');
@@ -46,7 +46,7 @@ function controllerEndpoints() {
 function frontendCalls() {
   const files = walk(frontendDir, (file) => file.endsWith('.ts') || file.endsWith('.vue'));
   const calls = [];
-  const callRe = /\b(apiGet|apiPost|apiForm|opsGet|opsPost|opsDelete|opsDownload|rawGet)\s*(?:<[^>]+>)?\s*\(\s*([`'"])([^`'"]+)/g;
+  const callRe = /\b(apiGet|apiPost|apiPostLong|apiDownload|apiForm|opsGet|opsPost|opsPut|opsDelete|opsDownload|opsDownloadWithProgress|rawGet)\s*(?:<[^>]+>)?\s*\(\s*([`'"])([^`'"]+)/g;
 
   for (const file of files) {
     const text = fs.readFileSync(file, 'utf8');

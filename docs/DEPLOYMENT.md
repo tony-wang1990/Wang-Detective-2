@@ -50,7 +50,7 @@ cd /opt/king-detective
 ### 步骤1: 克隆代码
 
 ```bash
-git clone https://github.com/tony-wang1990/Wang-Detective.git
+git clone https://github.com/tony-wang1990/Wang-Detective-2.git
 cd Wang-Detective
 ```
 
@@ -381,7 +381,7 @@ docker-compose up -d
 
 ## 📞 支持
 
-- **GitHub Issues**: https://github.com/tony-wang1990/Wang-Detective/issues
+- **GitHub Issues**: https://github.com/tony-wang1990/Wang-Detective-2/issues
 - **Telegram群**: @你的支持群
 - **文档**: `docs/FAQ.md`
 

@@ -1,6 +1,6 @@
 # Wang-Detective 100% 收口验收矩阵
 
-更新时间：2026-05-27
+更新时间：2026-07-13
 
 本阶段冻结新功能，目标不是继续扩范围，而是把已经上线的能力逐项验收到稳定、可部署、可回滚、可解释。本文档是后续把 README 中未满 100% 的模块逐步收口的总清单。
 
@@ -39,6 +39,9 @@
 | `/dashboard/risk` | 风险看板 | 风险扫描、端口明细、收敛建议、空状态、超时提示 | 已验收一期 |
 | `/dashboard/backups` | 备份归档 | 本地备份、Bucket 为空、归档刷新、恢复计划、定时方案 | 已验收一期 |
 | `/dashboard/rescue` | 救援中心 | SSH 一键自救、OCI 高危确认、netboot 预检/BootNext、执行结果和审计 | 已验收二期 |
+| `/dashboard/clients` | 客户端下载 | Windows、Android、Web/PWA 状态、版本、SHA256、安装包下载 | 已验收客户端构建 |
+| `/dashboard/all-features` | 全部功能 | 155 个 Telegram 回调处理器、会话状态、内联按钮、VNC/密码输入、恢复 ZIP 上传、账号表单跳转、附件下载、管理员鉴权 | Java 21 编译与网关测试通过，真实 OCI 动作按风险分批实测 |
+| `/dashboard/infrastructure` | 资源工具 | 引导卷、Cloudflare/DNS、IP 数据、租户安全、流量查询 | Vue 构建与 API 映射通过，高危 OCI 动作待专用资源实测 |
 | `/dashboard/features` | 功能中心 | 诊断、版本、入口跳转、旧页面迁移提示 | 已验收一期 |
 | `/dashboard/ops-terminal` | 运维终端 | 主机库、命令模板、Web SSH、SFTP、移动端不横向撑页 | 已验收一期 |
 | `/dashboard/ociLog` | 服务日志 | WebSocket、暂停、筛选、错误统计、移动端滚动、最近日志 REST 兜底 | 历史日志接口已接入，WebSocket 待实测 |

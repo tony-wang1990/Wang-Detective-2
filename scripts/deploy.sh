@@ -74,7 +74,7 @@ check_deployment_type() {
 # 拉取最新镜像
 pull_latest_image() {
     log_info "正在拉取最新Docker镜像..."
-    docker pull ghcr.io/tony-wang1990/wang-detective:main
+    docker pull ghcr.io/tony-wang1990/wang-detective-2:main
     log_success "镜像拉取完成"
 }
 
@@ -167,7 +167,7 @@ show_deployment_info() {
     echo "   - 停止服务: docker-compose down"
     echo ""
     echo "📚 更多信息："
-    echo "   - GitHub: https://github.com/tony-wang1990/Wang-Detective"
+    echo "   - GitHub: https://github.com/tony-wang1990/Wang-Detective-2"
     echo "   - 文档: 查看 README.md"
     echo ""
 }

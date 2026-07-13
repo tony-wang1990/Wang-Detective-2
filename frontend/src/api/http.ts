@@ -1,3 +1,5 @@
+import { apiUrl } from '../runtime/client';
+
 export interface ApiEnvelope<T> {
   success: boolean;
   msg?: string;
@@ -91,8 +93,8 @@ function handleUnauthorized() {
     redirectingToLogin = true;
     notifyGlobal('登录已过期，请重新登录', 'error');
   }
-  if (!window.location.pathname.includes('/login')) {
-    window.location.replace('/login');
+  if (!window.location.href.includes('/login')) {
+    window.location.href = window.location.href.includes('#') ? '#/login' : '/login';
   }
 }
 
@@ -145,9 +147,10 @@ async function parseResponse<T>(response: Response, url: string): Promise<T> {
 }
 
 export async function apiGet<T>(url: string): Promise<ApiEnvelope<T>> {
-  const done = beginNetwork(`/api${url}`);
+  const requestUrl = apiUrl(`/api${url}`);
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout(`/api${url}`, {
+    const response = await fetchWithTimeout(requestUrl, {
       headers: authHeaders()
     });
     return await parseResponse<ApiEnvelope<T>>(response, url);
@@ -157,9 +160,10 @@ export async function apiGet<T>(url: string): Promise<ApiEnvelope<T>> {
 }
 
 export async function apiPost<T>(url: string, body: unknown): Promise<ApiEnvelope<T>> {
-  const done = beginNetwork(`/api${url}`);
+  const requestUrl = apiUrl(`/api${url}`);
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout(`/api${url}`, {
+    const response = await fetchWithTimeout(requestUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -174,9 +178,10 @@ export async function apiPost<T>(url: string, body: unknown): Promise<ApiEnvelop
 }
 
 export async function apiPostLong<T>(url: string, body: unknown): Promise<ApiEnvelope<T>> {
-  const done = beginNetwork(`/api${url}`);
+  const requestUrl = apiUrl(`/api${url}`);
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout(`/api${url}`, {
+    const response = await fetchWithTimeout(requestUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -190,10 +195,34 @@ export async function apiPostLong<T>(url: string, body: unknown): Promise<ApiEnv
   }
 }
 
-export async function apiForm<T>(url: string, form: FormData): Promise<ApiEnvelope<T>> {
-  const done = beginNetwork(`/api${url}`);
+export async function apiDownload(url: string): Promise<{ blob: Blob; filename?: string }> {
+  const requestUrl = apiUrl(`/api${url}`);
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout(`/api${url}`, {
+    const response = await fetchWithTimeout(requestUrl, {
+      headers: authHeaders()
+    }, DOWNLOAD_TIMEOUT_MS);
+    if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorized();
+      }
+      const text = await response.text();
+      throw new Error(text || `${url} ${response.status}`);
+    }
+    return {
+      blob: await response.blob(),
+      filename: response.headers.get('Content-Disposition') || undefined
+    };
+  } finally {
+    done();
+  }
+}
+
+export async function apiForm<T>(url: string, form: FormData): Promise<ApiEnvelope<T>> {
+  const requestUrl = apiUrl(`/api${url}`);
+  const done = beginNetwork(requestUrl);
+  try {
+    const response = await fetchWithTimeout(requestUrl, {
       method: 'POST',
       headers: authHeaders(),
       body: form
@@ -205,9 +234,10 @@ export async function apiForm<T>(url: string, form: FormData): Promise<ApiEnvelo
 }
 
 export async function opsGet<T>(url: string): Promise<ApiEnvelope<T>> {
-  const done = beginNetwork(`/api/ops${url}`);
+  const requestUrl = apiUrl(`/api/ops${url}`);
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout(`/api/ops${url}`, {
+    const response = await fetchWithTimeout(requestUrl, {
       headers: authHeaders()
     });
     return await parseResponse<ApiEnvelope<T>>(response, url);
@@ -217,9 +247,10 @@ export async function opsGet<T>(url: string): Promise<ApiEnvelope<T>> {
 }
 
 export async function opsPost<T>(url: string, body: unknown): Promise<ApiEnvelope<T>> {
-  const done = beginNetwork(`/api/ops${url}`);
+  const requestUrl = apiUrl(`/api/ops${url}`);
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout(`/api/ops${url}`, {
+    const response = await fetchWithTimeout(requestUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -234,9 +265,10 @@ export async function opsPost<T>(url: string, body: unknown): Promise<ApiEnvelop
 }
 
 export async function opsPut<T>(url: string, body: unknown): Promise<ApiEnvelope<T>> {
-  const done = beginNetwork(`/api/ops${url}`);
+  const requestUrl = apiUrl(`/api/ops${url}`);
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout(`/api/ops${url}`, {
+    const response = await fetchWithTimeout(requestUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -251,9 +283,10 @@ export async function opsPut<T>(url: string, body: unknown): Promise<ApiEnvelope
 }
 
 export async function opsDelete<T>(url: string): Promise<ApiEnvelope<T>> {
-  const done = beginNetwork(`/api/ops${url}`);
+  const requestUrl = apiUrl(`/api/ops${url}`);
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout(`/api/ops${url}`, {
+    const response = await fetchWithTimeout(requestUrl, {
       method: 'DELETE',
       headers: authHeaders()
     });
@@ -264,9 +297,10 @@ export async function opsDelete<T>(url: string): Promise<ApiEnvelope<T>> {
 }
 
 export async function opsDownload(url: string, body: unknown): Promise<{ blob: Blob; filename?: string }> {
-  const done = beginNetwork(`/api/ops${url}`);
+  const requestUrl = apiUrl(`/api/ops${url}`);
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout(`/api/ops${url}`, {
+    const response = await fetchWithTimeout(requestUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -292,9 +326,10 @@ export async function opsDownloadWithProgress(
   body: unknown,
   onProgress?: (progress: TransferProgress) => void
 ): Promise<{ blob: Blob; filename?: string }> {
-  const done = beginNetwork(`/api/ops${url}`);
+  const requestUrl = apiUrl(`/api/ops${url}`);
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout(`/api/ops${url}`, {
+    const response = await fetchWithTimeout(requestUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -347,9 +382,10 @@ export async function opsUpload(path: string, hostId: string, file: File): Promi
   form.append('hostId', hostId);
   form.append('path', path);
   form.append('file', file);
-  const done = beginNetwork('/api/ops/sftp/upload');
+  const requestUrl = apiUrl('/api/ops/sftp/upload');
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout('/api/ops/sftp/upload', {
+    const response = await fetchWithTimeout(requestUrl, {
       method: 'POST',
       headers: authHeaders(),
       body: form
@@ -370,10 +406,11 @@ export function opsUploadWithProgress(
   form.append('hostId', hostId);
   form.append('path', path);
   form.append('file', file);
-  const done = beginNetwork('/api/ops/sftp/upload');
+  const requestUrl = apiUrl('/api/ops/sftp/upload');
+  const done = beginNetwork(requestUrl);
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/ops/sftp/upload');
+    xhr.open('POST', requestUrl);
     xhr.timeout = FORM_TIMEOUT_MS;
     const token = sessionStorage.getItem('token');
     if (token) {
@@ -426,9 +463,10 @@ export function opsUploadWithProgress(
 }
 
 export async function rawGet<T>(url: string): Promise<T> {
-  const done = beginNetwork(url);
+  const requestUrl = url.startsWith('http') ? url : apiUrl(url);
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout(url, {
+    const response = await fetchWithTimeout(requestUrl, {
       headers: authHeaders()
     });
     return await parseResponse<T>(response, url);
@@ -438,9 +476,10 @@ export async function rawGet<T>(url: string): Promise<T> {
 }
 
 export async function getHealth(): Promise<HealthData> {
-  const done = beginNetwork('/actuator/health');
+  const requestUrl = apiUrl('/actuator/health');
+  const done = beginNetwork(requestUrl);
   try {
-    const response = await fetchWithTimeout('/actuator/health', {
+    const response = await fetchWithTimeout(requestUrl, {
       headers: {}
     }, HEALTH_TIMEOUT_MS);
     if (!response.ok) {

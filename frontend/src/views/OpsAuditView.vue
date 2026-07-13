@@ -2,6 +2,8 @@
 import { computed, onMounted, ref } from 'vue';
 import { CheckCircle2, Clock3, Download, Filter, RefreshCw, Search, ShieldCheck, XCircle } from 'lucide-vue-next';
 import { opsGet } from '../api/http';
+import { apiUrl } from '../runtime/client';
+import { filenameFromDisposition, saveBlob } from '../runtime/fileTransfer';
 
 type AuditLog = {
   id?: string;
@@ -120,19 +122,18 @@ async function exportAudits() {
   loading.value = true;
   error.value = '';
   try {
-    const response = await fetch(`/api/ops/audit/export?${buildQuery(true)}`, {
+    const response = await fetch(apiUrl(`/api/ops/audit/export?${buildQuery(true)}`), {
       headers: sessionStorage.getItem('token') ? { Authorization: `Bearer ${sessionStorage.getItem('token')}` } : {}
     });
     if (!response.ok) {
       throw new Error(await response.text() || `export ${response.status}`);
     }
     const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `wang-detective-audit-${Date.now()}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    const name = filenameFromDisposition(
+      response.headers.get('Content-Disposition') || undefined,
+      `wang-detective-audit-${Date.now()}.csv`
+    );
+    await saveBlob(blob, name);
   } catch (err) {
     error.value = err instanceof Error ? err.message : '导出审计日志失败';
   } finally {

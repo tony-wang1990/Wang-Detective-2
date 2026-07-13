@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { apiPost, type LoginResponse } from '../api/http';
 import { useTheme } from '../composables/useTheme';
+import {
+  clientKind,
+  defaultServerBaseUrl,
+  getStoredServerBaseUrl,
+  isNativeClient,
+  normalizeServerBaseUrl,
+  saveServerBaseUrl
+} from '../runtime/client';
 
 const router = useRouter();
 const { theme, toggleTheme } = useTheme();
@@ -11,6 +19,14 @@ const error = ref('');
 const mfaRequired = ref(false);
 const mfaStateReady = ref(false);
 const mfaStateLoading = ref(false);
+const serverUrl = ref(getStoredServerBaseUrl() || defaultServerBaseUrl());
+const nativeClient = isNativeClient();
+const clientLabel = computed(() => {
+  const kind = clientKind();
+  if (kind === 'desktop') return 'Windows 客户端';
+  if (kind === 'android') return 'Android APP';
+  return 'Web 控制台';
+});
 const form = reactive({
   username: '',
   password: '',
@@ -18,7 +34,16 @@ const form = reactive({
 });
 
 async function loadMfaState() {
+  if (nativeClient && !normalizeServerBaseUrl(serverUrl.value)) {
+    mfaStateReady.value = false;
+    error.value = '请先填写 VPS 控制台服务器地址';
+    return;
+  }
+  if (nativeClient) {
+    saveServerBaseUrl(serverUrl.value);
+  }
   mfaStateLoading.value = true;
+  error.value = '';
   try {
     const result = await apiPost<boolean>('/sys/getEnableMfa', {});
     mfaRequired.value = Boolean(result.data);
@@ -32,6 +57,17 @@ async function loadMfaState() {
 }
 
 async function submit() {
+  if (nativeClient) {
+    const normalized = saveServerBaseUrl(serverUrl.value);
+    serverUrl.value = normalized;
+    if (!normalized) {
+      error.value = '请先填写 VPS 控制台服务器地址';
+      return;
+    }
+    if (!mfaStateReady.value) {
+      await loadMfaState();
+    }
+  }
   if (!mfaStateReady.value) {
     error.value = 'MFA 状态尚未确认，请等待页面初始化完成后再登录';
     return;
@@ -62,7 +98,11 @@ async function submit() {
   }
 }
 
-onMounted(loadMfaState);
+onMounted(() => {
+  if (!nativeClient || normalizeServerBaseUrl(serverUrl.value)) {
+    loadMfaState();
+  }
+});
 </script>
 
 <template>
@@ -109,6 +149,15 @@ onMounted(loadMfaState);
           </div>
         </div>
         <form @submit.prevent="submit">
+          <label v-if="nativeClient">
+            <span>{{ clientLabel }}服务器地址</span>
+            <input
+              v-model="serverUrl"
+              autocomplete="url"
+              placeholder="https://你的域名或服务器IP:9527"
+              @change="loadMfaState"
+            />
+          </label>
           <label>
             <span>账号</span>
             <input v-model="form.username" autocomplete="username" placeholder="请输入账号" />
@@ -121,10 +170,13 @@ onMounted(loadMfaState);
             <span>MFA 验证码</span>
             <input v-model="form.mfaCode" inputmode="numeric" autocomplete="one-time-code" placeholder="6 位动态验证码" />
           </label>
+          <p v-if="nativeClient" class="wd-login-hint">
+            客户端只保存服务器地址和登录状态，OCI 配置、任务、审计和 SSH 主机都从 VPS 实时读取。
+          </p>
           <p v-if="mfaStateLoading" class="wd-login-hint">正在确认安全登录状态...</p>
           <p v-if="loading" class="wd-login-hint">正在连接控制台服务，超过 20 秒无响应时请优先检查容器健康和反向代理源站。</p>
           <p v-if="error" class="wd-error">{{ error }}</p>
-          <button type="submit" :disabled="loading || !mfaStateReady">
+          <button type="submit" :disabled="loading || (!mfaStateReady && !nativeClient)">
             {{ loading ? '登录中...' : '登录控制台' }}
           </button>
         </form>

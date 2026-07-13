@@ -34,4 +34,10 @@ public class CallbackHandlerFactory {
                 .filter(handler -> handler.canHandle(callbackData))
                 .findFirst();
     }
+
+    public List<String> getRegisteredPatterns() {
+        return handlers.stream()
+                .map(CallbackHandler::getCallbackPattern)
+                .toList();
+    }
 }

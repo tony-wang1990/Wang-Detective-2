@@ -12,7 +12,7 @@ echo ""
 
 # 配置变量
 CONTAINER_NAME="king-detective"
-IMAGE_NAME="ghcr.io/tony-wang1990/wang-detective:main"
+IMAGE_NAME="ghcr.io/tony-wang1990/wang-detective-2:main"
 BASE_DIR="${KING_DETECTIVE_HOME:-/app/king-detective}"
 DATA_DIR="$BASE_DIR/data"
 KEYS_DIR="$BASE_DIR/keys"

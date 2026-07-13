@@ -73,7 +73,7 @@ else
 fi
 
 echo "步骤 2: 创建目录..."
-mkdir -p /app/king-detective/data /app/king-detective/keys /app/king-detective/logs /app/king-detective/runtime /app/king-detective/scripts /app/king-detective/backups || {
+mkdir -p /app/king-detective/data /app/king-detective/keys /app/king-detective/logs /app/king-detective/runtime /app/king-detective/scripts /app/king-detective/backups /app/king-detective/deploy/downloads || {
     echo "错误: 无法创建目录"
     exit 1
 }
@@ -85,7 +85,7 @@ cd /app/king-detective || {
 echo "步骤 3: 下载配置文件..."
 
 if [ ! -f "docker-compose.yml" ]; then
-    wget -q https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/docker-compose.yml || {
+    wget -q https://raw.githubusercontent.com/tony-wang1990/Wang-Detective-2/main/docker-compose.yml || {
         echo "错误: 下载 docker-compose.yml 失败"
         exit 1
     }
@@ -97,15 +97,16 @@ fi
 if grep -q "king-detective-websockify\\|ghcr.io/tony-wang1990/king-detective:main\\|start_period: 45s\\|profiles:.*watcher" docker-compose.yml \
     || ! grep -q "JAVA_TOOL_OPTIONS" docker-compose.yml \
     || ! grep -q "king-detective-watcher" docker-compose.yml \
-    || ! grep -Fq 'image: ${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective:main}' docker-compose.yml \
+    || ! grep -Fq 'image: ${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective-2:main}' docker-compose.yml \
     || ! grep -Fq './backups:/app/king-detective/backups' docker-compose.yml \
+    || ! grep -Fq './deploy:/app/king-detective/deploy' docker-compose.yml \
     || ! grep -Fq './scripts:/app/king-detective/scripts:ro' docker-compose.yml \
     || ! grep -Fq -- '-Dfile.encoding=UTF-8' docker-compose.yml \
     || ! grep -Fq 'start_period: 15m' docker-compose.yml \
     || ! grep -Fq '/actuator/health/liveness' docker-compose.yml; then
     backup_file="docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)"
     cp docker-compose.yml "$backup_file"
-    wget -q -O docker-compose.yml https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/docker-compose.yml || {
+    wget -q -O docker-compose.yml https://raw.githubusercontent.com/tony-wang1990/Wang-Detective-2/main/docker-compose.yml || {
         echo "错误: 刷新 docker-compose.yml 失败"
         mv "$backup_file" docker-compose.yml
         exit 1
@@ -114,7 +115,7 @@ if grep -q "king-detective-websockify\\|ghcr.io/tony-wang1990/king-detective:mai
 fi
 
 if [ ! -f "application.yml" ]; then
-    wget -q https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/src/main/resources/application.yml || {
+    wget -q https://raw.githubusercontent.com/tony-wang1990/Wang-Detective-2/main/src/main/resources/application.yml || {
         echo "错误: 下载 application.yml 失败"
         exit 1
     }
@@ -150,9 +151,9 @@ TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-king_detective_bot}
 CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
 SERVER_ADDRESS=${SERVER_ADDRESS:-0.0.0.0}
 SERVER_PORT=${SERVER_PORT:-9527}
-KING_DETECTIVE_GITHUB_REPOSITORY=${KING_DETECTIVE_GITHUB_REPOSITORY:-tony-wang1990/Wang-Detective}
+KING_DETECTIVE_GITHUB_REPOSITORY=${KING_DETECTIVE_GITHUB_REPOSITORY:-tony-wang1990/Wang-Detective-2}
 KING_DETECTIVE_GITHUB_BRANCH=${KING_DETECTIVE_GITHUB_BRANCH:-main}
-KING_DETECTIVE_IMAGE=${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective:main}
+KING_DETECTIVE_IMAGE=${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective-2:main}
 JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS_VALUE}
 EOF
     chmod 600 .env
@@ -230,9 +231,9 @@ ensure_env "TELEGRAM_BOT_CHAT_ID" "$current_tg_chat_id"
 ensure_env "TELEGRAM_STARTUP_DELAY_SECONDS" "20"
 ensure_env "SERVER_ADDRESS" "0.0.0.0"
 ensure_env "SERVER_PORT" "9527"
-ensure_env "KING_DETECTIVE_GITHUB_REPOSITORY" "tony-wang1990/Wang-Detective"
+ensure_env "KING_DETECTIVE_GITHUB_REPOSITORY" "tony-wang1990/Wang-Detective-2"
 ensure_env "KING_DETECTIVE_GITHUB_BRANCH" "main"
-ensure_env "KING_DETECTIVE_IMAGE" "ghcr.io/tony-wang1990/wang-detective:main"
+ensure_env "KING_DETECTIVE_IMAGE" "ghcr.io/tony-wang1990/wang-detective-2:main"
 ensure_env "JAVA_TOOL_OPTIONS" "$DEFAULT_JAVA_TOOL_OPTIONS"
 append_env_word "JAVA_TOOL_OPTIONS" "-XX:TieredStopAtLevel=1"
 append_env_word "JAVA_TOOL_OPTIONS" "-Dfile.encoding=UTF-8"
@@ -242,7 +243,7 @@ append_env_word "JAVA_TOOL_OPTIONS" "-Dspring.jmx.enabled=false"
 chmod 600 .env
 
 echo "步骤 3.1: 同步运维脚本..."
-SCRIPT_BASE_URL="https://raw.githubusercontent.com/tony-wang1990/Wang-Detective/main/scripts"
+SCRIPT_BASE_URL="https://raw.githubusercontent.com/tony-wang1990/Wang-Detective-2/main/scripts"
 download_script() {
     script_name="$1"
     target="scripts/${script_name}"

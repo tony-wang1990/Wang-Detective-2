@@ -83,7 +83,7 @@ if [ -z "$ROLLBACK_IMAGE" ] && [ -f runtime/last_image_before_update ]; then
     ROLLBACK_IMAGE="$(grep -E '^image=' runtime/last_image_before_update | tail -n1 | cut -d= -f2-)"
 fi
 
-[ -n "$ROLLBACK_IMAGE" ] || die "请指定回滚镜像，例如: bash scripts/rollback.sh ghcr.io/tony-wang1990/wang-detective:main"
+[ -n "$ROLLBACK_IMAGE" ] || die "请指定回滚镜像，例如: bash scripts/rollback.sh ghcr.io/tony-wang1990/wang-detective-2:main"
 
 log "=== Wang-Detective 回滚 ==="
 log "应用目录: $APP_DIR"

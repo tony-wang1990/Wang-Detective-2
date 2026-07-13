@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { FileText, Pause, Play, RefreshCw, Search, Trash2 } from 'lucide-vue-next';
 import { apiGet, notifyGlobal } from '../api/http';
+import { websocketUrl } from '../runtime/client';
 
 const lines = ref<string[]>([]);
 const status = ref<'idle' | 'connecting' | 'open' | 'closed' | 'error'>('idle');
@@ -55,8 +56,7 @@ const statusClass = computed(() => {
 function socketUrl() {
   const token = sessionStorage.getItem('token') || '';
   if (!token) return '';
-  const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${scheme}//${window.location.host}/logs?token=${encodeURIComponent(token)}`;
+  return websocketUrl(`/logs?token=${encodeURIComponent(token)}`);
 }
 
 function trimLines() {

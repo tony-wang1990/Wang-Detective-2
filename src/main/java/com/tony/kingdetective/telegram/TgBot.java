@@ -878,7 +878,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         try {
             telegramClient.execute(SendMessage.builder()
                     .chatId(chatId)
-                    .text("❌ 无权限操作此机器人🤖，项目地址：https://github.com/tony-wang1990/Wang-Detective")
+                    .text("❌ 无权限操作此机器人🤖，项目地址：https://github.com/tony-wang1990/Wang-Detective-2")
                     .build());
         } catch (TelegramApiException e) {
             log.error("发送无权限消息失败", e);

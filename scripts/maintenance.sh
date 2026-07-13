@@ -126,7 +126,7 @@ case "$ACTION" in
   bash scripts/maintenance.sh verify-backup /path/to/backup.tar.gz
   bash scripts/maintenance.sh restore /path/to/backup.tar.gz
   bash scripts/maintenance.sh update
-  bash scripts/maintenance.sh rollback ghcr.io/tony-wang1990/wang-detective:main
+  bash scripts/maintenance.sh rollback ghcr.io/tony-wang1990/wang-detective-2:main
   bash scripts/maintenance.sh smoke
   bash scripts/maintenance.sh support
   bash scripts/maintenance.sh restart

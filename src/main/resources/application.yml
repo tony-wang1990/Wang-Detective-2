@@ -11,6 +11,10 @@ web:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
 
+clients:
+  download-dir: ${CLIENT_DOWNLOAD_DIR:/app/king-detective/deploy/downloads}
+  version: ${KING_DETECTIVE_CLIENT_VERSION:0.1.0}
+
 ops:
   ssh:
     secret-key: ${OPS_SSH_SECRET_KEY:${ADMIN_PASSWORD:${WEB_PASSWORD:admin123456}}}

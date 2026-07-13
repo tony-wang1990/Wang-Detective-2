@@ -142,9 +142,9 @@ public class TgSessionFlowService {
     }
 
     /**
-     * 校验备份密码（至少6位）
+     * 校验备份密码（至少8位）
      */
     public boolean isValidBackupPassword(String password) {
-        return password != null && password.trim().length() >= 6;
+        return password != null && password.trim().length() >= 8;
     }
 }

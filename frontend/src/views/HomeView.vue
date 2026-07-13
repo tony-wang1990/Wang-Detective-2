@@ -9,6 +9,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Activity, CalendarDays, Globe2, Server, Zap } from 'lucide-vue-next';
 import { apiGet, getHealth, type GlanceData, type HealthData } from '../api/http';
+import { websocketUrl } from '../runtime/client';
 
 const glance = reactive<GlanceData>({});
 const health = ref<HealthData>({});
@@ -276,7 +277,7 @@ function connectMetrics() {
     return;
   }
   disconnectMetrics();
-  const url = `${window.location.origin.replace(/^http/, 'ws')}/metrics?token=${encodeURIComponent(token)}`;
+  const url = websocketUrl(`/metrics?token=${encodeURIComponent(token)}`);
   const ws = new WebSocket(url);
   metricsWs = ws;
   metricsManualClose = false;

@@ -1,0 +1,28 @@
+{
+  "name": "wang-detective-android",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Wang Detective Android client",
+  "scripts": {
+    "prepare:web": "node scripts/prepare-web.mjs",
+    "add:android": "npm run prepare:web && cap add android",
+    "sync": "npm run prepare:web && cap sync android",
+    "open": "npm run sync && cap open android",
+    "build:apk": "node scripts/build-apk.mjs debug",
+    "build:release": "node scripts/build-apk.mjs release"
+  },
+  "dependencies": {
+    "@capacitor/app": "^6.0.2",
+    "@capacitor/browser": "^6.0.2",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/filesystem": "^6.0.3",
+    "@capacitor/share": "^6.0.2",
+    "@capacitor/status-bar": "^6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/cli": "^6.2.1",
+    "typescript": "^5.7.2"
+  }
+}

@@ -175,7 +175,7 @@ main() {
     # Step 6: 拉取新镜像
     print_header "[6/8] 拉取最新Docker镜像"
 
-    print_info "正在拉取 ghcr.io/tony-wang1990/king-detective:main..."
+    print_info "正在拉取 ghcr.io/tony-wang1990/wang-detective-2:main..."
     $COMPOSE_CMD pull king-detective
 
     print_info "正在拉取 alpine:latest (用于watcher)..."

@@ -1,0 +1,1 @@
+import{g as l}from"./vue-vendor-DyC-tVQF.js";const e=l(localStorage.getItem("theme")||"light");function a(t){e.value=t,document.documentElement.classList.toggle("dark",t==="dark"),localStorage.setItem("theme",t)}function o(){a(e.value==="dark"?"light":"dark")}function g(){return a(e.value==="dark"?"dark":"light"),{theme:e,toggleTheme:o}}export{g as u};

@@ -4,9 +4,12 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   ClipboardList,
   DatabaseBackup,
+  DownloadCloud,
   FileText,
   Home,
   LifeBuoy,
+  Grid3X3,
+  Wrench,
   LogOut,
   Menu,
   Moon,
@@ -21,6 +24,7 @@ import {
 } from 'lucide-vue-next';
 import { useTheme } from '../composables/useTheme';
 import { apiGet, apiPost, getHealth } from '../api/http';
+import { currentServerLabel } from '../runtime/client';
 
 type VersionInfo = {
   currentVersion?: string;
@@ -33,7 +37,7 @@ type VersionInfo = {
 const router = useRouter();
 const route = useRoute();
 const { theme, toggleTheme } = useTheme();
-const host = window.location.host;
+const host = currentServerLabel();
 const healthStatus = ref('检查中');
 const version = ref(localStorage.getItem('currentVersion') || 'main');
 const latestVersion = ref(localStorage.getItem('latestVersion') || '');
@@ -57,6 +61,9 @@ const navItems = [
   { label: '风险看板', path: '/dashboard/risk', icon: ShieldAlert },
   { label: '备份归档', path: '/dashboard/backups', icon: DatabaseBackup },
   { label: '救援中心', path: '/dashboard/rescue', icon: LifeBuoy },
+  { label: '全部功能', path: '/dashboard/all-features', icon: Grid3X3 },
+  { label: '资源工具', path: '/dashboard/infrastructure', icon: Wrench },
+  { label: '客户端下载', path: '/dashboard/clients', icon: DownloadCloud },
   { label: '功能中心', path: '/dashboard/features', icon: ServerCog },
   { label: '运维终端', path: '/dashboard/ops-terminal', icon: Terminal },
   { label: '服务日志', path: '/dashboard/ociLog', icon: FileText },

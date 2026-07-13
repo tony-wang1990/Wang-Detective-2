@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
   plugins: [vue()],
-  base: '/',
+  base: process.env.VITE_WD_CLIENT_KIND ? './' : '/',
   server: {
     proxy: {
       '/api': 'http://127.0.0.1:9527',
@@ -11,7 +11,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../src/main/resources/dist',
+    outDir: process.env.VITE_WD_CLIENT_OUTDIR || '../src/main/resources/dist',
     emptyOutDir: true,
     sourcemap: false,
     chunkSizeWarningLimit: 650,

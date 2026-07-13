@@ -80,7 +80,7 @@ command -v curl >/dev/null 2>&1 || die "缺少 curl 命令"
 cd "$APP_DIR"
 
 IMAGE="${IMAGE:-$(env_value KING_DETECTIVE_IMAGE)}"
-IMAGE="${IMAGE:-ghcr.io/tony-wang1990/wang-detective:main}"
+IMAGE="${IMAGE:-ghcr.io/tony-wang1990/wang-detective-2:main}"
 
 log "=== Wang-Detective 手动更新 ==="
 log "应用目录: $APP_DIR"

@@ -64,7 +64,7 @@ public class CommonUtils {
     public static final String TERMINATE_INSTANCE_PREFIX = "TERMINATE_INSTANCE_PREFIX_";
     public static final String LOG_FILE_PATH = "/var/log/king-detective.log";
     public static final String MFA_QR_PNG_PATH = System.getProperty("user.dir") + File.separator + "mfa.png";
-    private static final String DEFAULT_GITHUB_REPOSITORY = "tony-wang1990/Wang-Detective";
+    private static final String DEFAULT_GITHUB_REPOSITORY = "tony-wang1990/Wang-Detective-2";
     private static final String DEFAULT_GITHUB_BRANCH = "main";
     private static final long GITHUB_RELEASE_CACHE_MILLIS = TimeUnit.HOURS.toMillis(6);
     private static volatile JSONObject latestReleaseCache;
