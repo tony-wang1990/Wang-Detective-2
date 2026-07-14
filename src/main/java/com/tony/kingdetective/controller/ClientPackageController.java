@@ -29,7 +29,7 @@ public class ClientPackageController {
     @Value("${clients.download-dir:/app/king-detective/deploy/downloads}")
     private String clientDownloadDir;
 
-    @Value("${clients.version:0.1.1}")
+    @Value("${clients.version:0.1.2}")
     private String clientVersion;
 
     @Value("${clients.release-repository:" + DEFAULT_RELEASE_REPOSITORY + "}")

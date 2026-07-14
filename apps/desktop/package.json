@@ -1,6 +1,6 @@
 {
   "name": "wang-detective-desktop",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "main": "src/main.cjs",
   "description": "Wang Detective Windows desktop client",
@@ -27,6 +27,7 @@
     "files": [
       "src/**/*",
       "web/**/*",
+      "build/icon.ico",
       "package.json"
     ],
     "extraMetadata": {

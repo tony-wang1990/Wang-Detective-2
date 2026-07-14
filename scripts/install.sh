@@ -98,6 +98,7 @@ if grep -q "king-detective-websockify\\|ghcr.io/tony-wang1990/king-detective:mai
     || ! grep -q "JAVA_TOOL_OPTIONS" docker-compose.yml \
     || ! grep -q "king-detective-watcher" docker-compose.yml \
     || ! grep -Fq 'image: ${KING_DETECTIVE_IMAGE:-ghcr.io/tony-wang1990/wang-detective-2:main}' docker-compose.yml \
+    || ! grep -Fq 'KING_DETECTIVE_CLIENT_VERSION=${KING_DETECTIVE_CLIENT_VERSION:-0.1.2}' docker-compose.yml \
     || ! grep -Fq './backups:/app/king-detective/backups' docker-compose.yml \
     || ! grep -Fq './deploy:/app/king-detective/deploy' docker-compose.yml \
     || ! grep -Fq './scripts:/app/king-detective/scripts:ro' docker-compose.yml \
@@ -234,6 +235,7 @@ ensure_env "SERVER_PORT" "9527"
 ensure_env "KING_DETECTIVE_GITHUB_REPOSITORY" "tony-wang1990/Wang-Detective-2"
 ensure_env "KING_DETECTIVE_GITHUB_BRANCH" "main"
 ensure_env "KING_DETECTIVE_IMAGE" "ghcr.io/tony-wang1990/wang-detective-2:main"
+ensure_env "KING_DETECTIVE_CLIENT_VERSION" "0.1.2"
 ensure_env "JAVA_TOOL_OPTIONS" "$DEFAULT_JAVA_TOOL_OPTIONS"
 
 if grep -Eq '^KING_DETECTIVE_IMAGE=ghcr\.io/tony-wang1990/(wang-detective|king-detective):main$' .env; then
@@ -243,6 +245,10 @@ fi
 if grep -q '^KING_DETECTIVE_GITHUB_REPOSITORY=tony-wang1990/Wang-Detective$' .env; then
     sed -i 's|^KING_DETECTIVE_GITHUB_REPOSITORY=.*|KING_DETECTIVE_GITHUB_REPOSITORY=tony-wang1990/Wang-Detective-2|' .env
     echo "  - 已将旧仓库地址迁移到 Wang-Detective-2"
+fi
+if grep -q '^KING_DETECTIVE_CLIENT_VERSION=0.1.1$' .env; then
+    sed -i 's|^KING_DETECTIVE_CLIENT_VERSION=0.1.1$|KING_DETECTIVE_CLIENT_VERSION=0.1.2|' .env
+    echo "  - 已将客户端发布版本更新到 0.1.2"
 fi
 
 append_env_word "JAVA_TOOL_OPTIONS" "-XX:TieredStopAtLevel=1"

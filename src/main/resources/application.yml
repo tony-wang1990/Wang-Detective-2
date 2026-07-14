@@ -13,7 +13,7 @@ web:
 
 clients:
   download-dir: ${CLIENT_DOWNLOAD_DIR:/app/king-detective/deploy/downloads}
-  version: ${KING_DETECTIVE_CLIENT_VERSION:0.1.1}
+  version: ${KING_DETECTIVE_CLIENT_VERSION:0.1.2}
   release-repository: ${KING_DETECTIVE_GITHUB_REPOSITORY:tony-wang1990/Wang-Detective-2}
 
 ops:

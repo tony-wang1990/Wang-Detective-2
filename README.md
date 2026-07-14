@@ -173,7 +173,7 @@ server {
 | `TELEGRAM_BOT_TOKEN` | 空 | Telegram Bot Token，留空则不启动 Bot |
 | `TELEGRAM_BOT_CHAT_ID` | 空 | 允许接收通知和操作 Bot 的 Chat ID |
 | `KING_DETECTIVE_IMAGE` | `ghcr.io/tony-wang1990/wang-detective-2:main` | Docker 镜像 |
-| `KING_DETECTIVE_CLIENT_VERSION` | `0.1.1` | 客户端下载中心显示版本 |
+| `KING_DETECTIVE_CLIENT_VERSION` | `0.1.2` | 客户端下载中心显示版本 |
 | `CLIENT_DOWNLOAD_DIR` | `/app/king-detective/deploy/downloads` | Windows/APK 安装包目录 |
 | `AUTO_BACKUP_ENABLED` | `false` | 是否启用自动备份 |
 | `AUTO_BACKUP_CRON` | `0 0 3 * * ?` | 自动备份 Cron |
@@ -247,13 +247,13 @@ npm --prefix apps/desktop run dist:win
 输出目录：
 
 ```text
-apps/desktop/release/Wang-Detective-Setup-0.1.1.exe
+apps/desktop/release/Wang-Detective-Setup-0.1.2.exe
 ```
 
 发布到 VPS 下载目录：
 
 ```bash
-node scripts/publish-client-package.mjs windows apps/desktop/release/Wang-Detective-Setup-0.1.1.exe
+node scripts/publish-client-package.mjs windows apps/desktop/release/Wang-Detective-Setup-0.1.2.exe
 ```
 
 ## Android APP

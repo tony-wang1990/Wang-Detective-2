@@ -11,6 +11,7 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 720,
     title: 'Wang Detective',
+    icon: path.join(__dirname, '..', 'build', 'icon.ico'),
     backgroundColor: '#0f172a',
     autoHideMenuBar: true,
     webPreferences: {

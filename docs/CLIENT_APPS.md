@@ -42,7 +42,7 @@ npm run dist:win
 安装包位于 `apps/desktop/release`。也可执行 `npm run dist:portable` 构建便携版。发布安装版：
 
 ```bash
-node scripts/publish-client-package.mjs windows apps/desktop/release/Wang-Detective-Setup-0.1.1.exe
+node scripts/publish-client-package.mjs windows apps/desktop/release/Wang-Detective-Setup-0.1.2.exe
 ```
 
 ## Android 客户端
@@ -81,7 +81,7 @@ bash scripts/sync-client-packages.sh
 
 ```env
 CLIENT_DOWNLOAD_DIR=/app/king-detective/deploy/downloads
-KING_DETECTIVE_CLIENT_VERSION=0.1.1
+KING_DETECTIVE_CLIENT_VERSION=0.1.2
 ```
 
 生产环境必须使用 HTTPS，并让反向代理转发 WebSocket 升级头及 `X-Forwarded-Proto`、`X-Forwarded-Host`。Android 若连接纯 HTTP 地址，虽然调试配置允许明文请求，生产发布仍建议强制 HTTPS。

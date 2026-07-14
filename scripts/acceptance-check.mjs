@@ -209,6 +209,18 @@ check('frontend does not use native browser dialogs', () => {
   assert(!bad.length, `native browser dialog found in: ${bad.join(', ')}`);
 });
 
+check('native login reports connectivity separately from optional MFA', () => {
+  const login = read('frontend/src/views/LoginView.vue');
+  const desktopMain = read('apps/desktop/src/main.cjs');
+  const desktopPackage = JSON.parse(read('apps/desktop/package.json'));
+
+  assert(!login.includes('无法读取 MFA 状态'), 'connection failures must not be presented as MFA errors');
+  assert(login.includes('无法连接服务器'), 'native login must explain server connectivity failures');
+  assert(login.includes('v-if="mfaRequired"'), 'MFA input must remain hidden unless the server enables it');
+  assert(desktopMain.includes("icon: path.join(__dirname, '..', 'build', 'icon.ico')"), 'desktop window must load the branded icon');
+  assert(desktopPackage.build.files.includes('build/icon.ico'), 'desktop package must include the window icon');
+});
+
 check('production dist index references existing assets', () => {
   const indexPath = 'src/main/resources/dist/index.html';
   assert(fs.existsSync(file(indexPath)), `${indexPath} is missing`);

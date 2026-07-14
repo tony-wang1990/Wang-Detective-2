@@ -19,6 +19,7 @@ const error = ref('');
 const mfaRequired = ref(false);
 const mfaStateReady = ref(false);
 const mfaStateLoading = ref(false);
+const connectionHint = ref('');
 const serverUrl = ref(getStoredServerBaseUrl() || defaultServerBaseUrl());
 const nativeClient = isNativeClient();
 const clientLabel = computed(() => {
@@ -33,24 +34,37 @@ const form = reactive({
   mfaCode: ''
 });
 
-async function loadMfaState() {
+async function loadMfaState(reportError = false) {
   if (nativeClient && !normalizeServerBaseUrl(serverUrl.value)) {
     mfaStateReady.value = false;
-    error.value = '请先填写 VPS 控制台服务器地址';
-    return;
+    connectionHint.value = '';
+    if (reportError) {
+      error.value = '请先填写 VPS 控制台服务器地址';
+    }
+    return false;
   }
   if (nativeClient) {
     saveServerBaseUrl(serverUrl.value);
   }
   mfaStateLoading.value = true;
   error.value = '';
+  connectionHint.value = '';
   try {
     const result = await apiPost<boolean>('/sys/getEnableMfa', {});
     mfaRequired.value = Boolean(result.data);
     mfaStateReady.value = true;
+    return true;
   } catch (err) {
     mfaStateReady.value = false;
-    error.value = err instanceof Error ? `无法读取 MFA 状态：${err.message}` : '无法读取 MFA 状态，请稍后重试';
+    mfaRequired.value = false;
+    const address = normalizeServerBaseUrl(serverUrl.value) || '当前服务器';
+    const message = `无法连接服务器 ${address}，请检查地址、端口和网络后重试`;
+    if (reportError) {
+      error.value = message;
+    } else {
+      connectionHint.value = message;
+    }
+    return false;
   } finally {
     mfaStateLoading.value = false;
   }
@@ -65,11 +79,12 @@ async function submit() {
       return;
     }
     if (!mfaStateReady.value) {
-      await loadMfaState();
+      const connected = await loadMfaState(true);
+      if (!connected) return;
     }
   }
   if (!mfaStateReady.value) {
-    error.value = 'MFA 状态尚未确认，请等待页面初始化完成后再登录';
+    error.value = '尚未连接服务器，请确认服务器地址后重试';
     return;
   }
   loading.value = true;
@@ -100,7 +115,7 @@ async function submit() {
 
 onMounted(() => {
   if (!nativeClient || normalizeServerBaseUrl(serverUrl.value)) {
-    loadMfaState();
+    loadMfaState(false);
   }
 });
 </script>
@@ -155,7 +170,7 @@ onMounted(() => {
               v-model="serverUrl"
               autocomplete="url"
               placeholder="https://你的域名或服务器IP:9527"
-              @change="loadMfaState"
+              @change="loadMfaState(false)"
             />
           </label>
           <label>
@@ -174,6 +189,7 @@ onMounted(() => {
             客户端只保存服务器地址和登录状态，OCI 配置、任务、审计和 SSH 主机都从 VPS 实时读取。
           </p>
           <p v-if="mfaStateLoading" class="wd-login-hint">正在确认安全登录状态...</p>
+          <p v-else-if="connectionHint" class="wd-login-hint">{{ connectionHint }}</p>
           <p v-if="loading" class="wd-login-hint">正在连接控制台服务，超过 20 秒无响应时请优先检查容器健康和反向代理源站。</p>
           <p v-if="error" class="wd-error">{{ error }}</p>
           <button type="submit" :disabled="loading || (!mfaStateReady && !nativeClient)">
