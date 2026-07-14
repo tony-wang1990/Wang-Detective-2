@@ -235,6 +235,16 @@ ensure_env "KING_DETECTIVE_GITHUB_REPOSITORY" "tony-wang1990/Wang-Detective-2"
 ensure_env "KING_DETECTIVE_GITHUB_BRANCH" "main"
 ensure_env "KING_DETECTIVE_IMAGE" "ghcr.io/tony-wang1990/wang-detective-2:main"
 ensure_env "JAVA_TOOL_OPTIONS" "$DEFAULT_JAVA_TOOL_OPTIONS"
+
+if grep -Eq '^KING_DETECTIVE_IMAGE=ghcr\.io/tony-wang1990/(wang-detective|king-detective):main$' .env; then
+    sed -i 's|^KING_DETECTIVE_IMAGE=.*|KING_DETECTIVE_IMAGE=ghcr.io/tony-wang1990/wang-detective-2:main|' .env
+    echo "  - 已将旧镜像地址迁移到 Wang-Detective-2"
+fi
+if grep -q '^KING_DETECTIVE_GITHUB_REPOSITORY=tony-wang1990/Wang-Detective$' .env; then
+    sed -i 's|^KING_DETECTIVE_GITHUB_REPOSITORY=.*|KING_DETECTIVE_GITHUB_REPOSITORY=tony-wang1990/Wang-Detective-2|' .env
+    echo "  - 已将旧仓库地址迁移到 Wang-Detective-2"
+fi
+
 append_env_word "JAVA_TOOL_OPTIONS" "-XX:TieredStopAtLevel=1"
 append_env_word "JAVA_TOOL_OPTIONS" "-Dfile.encoding=UTF-8"
 append_env_word "JAVA_TOOL_OPTIONS" "-Dstdout.encoding=UTF-8"

@@ -82,6 +82,19 @@ cd "$APP_DIR"
 IMAGE="${IMAGE:-$(env_value KING_DETECTIVE_IMAGE)}"
 IMAGE="${IMAGE:-ghcr.io/tony-wang1990/wang-detective-2:main}"
 
+case "$IMAGE" in
+    ghcr.io/tony-wang1990/wang-detective:main|ghcr.io/tony-wang1990/king-detective:main)
+        warn "检测到旧镜像地址 $IMAGE，自动迁移到 Wang-Detective-2"
+        IMAGE="ghcr.io/tony-wang1990/wang-detective-2:main"
+        ;;
+esac
+
+REPOSITORY="$(env_value KING_DETECTIVE_GITHUB_REPOSITORY)"
+if [ "$REPOSITORY" = "tony-wang1990/Wang-Detective" ]; then
+    warn "检测到旧仓库地址，自动迁移到 Wang-Detective-2"
+    set_env_value KING_DETECTIVE_GITHUB_REPOSITORY "tony-wang1990/Wang-Detective-2"
+fi
+
 log "=== Wang-Detective 手动更新 ==="
 log "应用目录: $APP_DIR"
 log "目标镜像: $IMAGE"

@@ -260,6 +260,19 @@ check('install and server smoke include remote smoke helpers', () => {
   assert(serverSmoke.includes('sync-client-packages.sh'), 'server smoke must check the client package sync helper');
 });
 
+check('install and update migrate legacy repository coordinates', () => {
+  const install = read('scripts/install.sh');
+  const update = read('scripts/update.sh');
+  const currentImage = 'ghcr.io/tony-wang1990/wang-detective-2:main';
+
+  assert(install.includes('(wang-detective|king-detective):main'), 'install.sh must detect legacy image names');
+  assert(install.includes(`KING_DETECTIVE_IMAGE=${currentImage}`), 'install.sh must migrate to the current image');
+  assert(update.includes('ghcr.io/tony-wang1990/wang-detective:main|ghcr.io/tony-wang1990/king-detective:main'), 'update.sh must detect legacy image names');
+  assert(update.includes(`IMAGE="${currentImage}"`), 'update.sh must migrate to the current image');
+  assert(install.includes('KING_DETECTIVE_GITHUB_REPOSITORY=tony-wang1990/Wang-Detective-2'), 'install.sh must migrate the legacy repository');
+  assert(update.includes('set_env_value KING_DETECTIVE_GITHUB_REPOSITORY "tony-wang1990/Wang-Detective-2"'), 'update.sh must migrate the legacy repository');
+});
+
 check('Docker and install paths force UTF-8 text encoding', () => {
   const dockerfile = read('Dockerfile');
   const compose = read('docker-compose.yml');
