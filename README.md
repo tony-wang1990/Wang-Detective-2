@@ -163,13 +163,17 @@ server {
 
 完整示例见 [.env.example](.env.example)。常用配置如下：
 
+> ⚠️ 自 2026-11-24 起不再有任何默认密码：`ADMIN_PASSWORD` 与 `OPS_SSH_SECRET_KEY`
+> 均为必填，未设置（或过短、仍为占位值）时应用在启动时直接拒绝启动，请先在 `.env`
+> 中设置好再启动。`OPS_SSH_SECRET_KEY` 必须与管理员密码不同。
+
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
 | `ADMIN_USERNAME` | `admin` | Web 与客户端管理员账号 |
-| `ADMIN_PASSWORD` | `admin123456` | 管理员密码，生产环境必须修改 |
-| `OPS_SSH_SECRET_KEY` | 管理员密码 | SSH 凭据加密密钥，建议单独设置 |
+| `ADMIN_PASSWORD` | 无默认值（必填，至少 8 位） | 管理员密码；未设置或过短时应用拒绝启动 |
+| `OPS_SSH_SECRET_KEY` | 无默认值（必填） | SSH 凭据加密密钥，必须与管理员密码不同；不再回退到管理员密码 |
 | `SERVER_PORT` | `9527` | 后端监听端口 |
-| `CORS_ALLOWED_ORIGINS` | `*` | 允许的前端来源，生产环境建议指定域名 |
+| `CORS_ALLOWED_ORIGINS` | 空（仅同源） | 允许的前端来源；生产如需跨域请显式指定域名列表，不要用 `*` |
 | `TELEGRAM_BOT_TOKEN` | 空 | Telegram Bot Token，留空则不启动 Bot |
 | `TELEGRAM_BOT_CHAT_ID` | 空 | 允许接收通知和操作 Bot 的 Chat ID |
 | `KING_DETECTIVE_IMAGE` | `ghcr.io/tony-wang1990/wang-detective-2:main` | Docker 镜像 |

@@ -1,0 +1,22 @@
+.git
+.github
+.gitignore
+Dockerfile
+docker-compose.yml
+*.md
+docs/
+img/
+deploy/
+scripts/
+frontend/
+apps/
+# NOTE: src/main/resources/dist/ is intentionally NOT excluded: the committed
+# prebuilt frontend is packaged into the jar (no frontend build runs in Docker).
+# Removing dist/ from version control is a separate P1 task, not done here.
+*.db
+*.log
+*_check.txt
+target/
+node_modules/
+.env
+.env.example

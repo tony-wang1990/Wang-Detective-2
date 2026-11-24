@@ -22,7 +22,10 @@ public class SecretCryptoService {
     private static final int TAG_BITS = 128;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    @Value("${ops.ssh.secret-key:${web.password}}")
+    // No fallback to the admin (web) password: OPS_SSH_SECRET_KEY is mandatory.
+    // If it is blank, StartupCredentialValidator refuses to start; key() below
+    // additionally fails closed instead of silently using a built-in secret.
+    @Value("${ops.ssh.secret-key:}")
     private String secretKey;
 
     public String encrypt(String plainText) {
@@ -67,13 +70,17 @@ public class SecretCryptoService {
         } catch (OciException e) {
             throw e;
         } catch (Exception e) {
-            throw new OciException(-1, "Failed to decrypt SSH secret. Check OPS_SSH_SECRET_KEY or web password.");
+            throw new OciException(-1, "Failed to decrypt SSH secret. Check OPS_SSH_SECRET_KEY.");
         }
     }
 
     private SecretKeySpec key() throws Exception {
-        String source = StrUtil.blankToDefault(secretKey, "king-detective-default-ssh-secret");
-        byte[] digest = MessageDigest.getInstance("SHA-256").digest(source.getBytes(StandardCharsets.UTF_8));
+        if (StrUtil.isBlank(secretKey)) {
+            throw new IllegalStateException(
+                    "OPS_SSH_SECRET_KEY is not set. Set it in .env to a long random secret "
+                            + "(different from ADMIN_PASSWORD) and restart; see .env.example.");
+        }
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(secretKey.getBytes(StandardCharsets.UTF_8));
         return new SecretKeySpec(digest, "AES");
     }
 }

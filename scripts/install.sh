@@ -133,10 +133,38 @@ if grep -q "address: '::'\\|^  port: 9527$" application.yml; then
     echo "  - 已备份旧 application.yml 为 $app_backup_file，并切换为 IPv4 默认监听"
 fi
 
+# Random secret generators used when the operator did not provide a password.
+# There is no weak default anymore: a missing ADMIN_PASSWORD / OPS_SSH_SECRET_KEY
+# is replaced by a freshly generated random value (printed once, see below).
+random_password() {
+    if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex 16
+    else
+        tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32
+    fi
+}
+random_hex_secret() {
+    if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex 32
+    else
+        tr -dc 'a-f0-9' < /dev/urandom | head -c 64
+    fi
+}
+
 if [ ! -f ".env" ]; then
     ADMIN_USERNAME="${ADMIN_USERNAME:-${WEB_ACCOUNT:-admin}}"
-    ADMIN_PASSWORD="${ADMIN_PASSWORD:-${WEB_PASSWORD:-admin123456}}"
-    OPS_SSH_SECRET_KEY="${OPS_SSH_SECRET_KEY:-$ADMIN_PASSWORD}"
+    GENERATED_ADMIN_PASSWORD=""
+    if [ -z "${ADMIN_PASSWORD:-${WEB_PASSWORD:-}}" ]; then
+        ADMIN_PASSWORD="$(random_password)"
+        GENERATED_ADMIN_PASSWORD=1
+    else
+        ADMIN_PASSWORD="${ADMIN_PASSWORD:-${WEB_PASSWORD}}"
+    fi
+    # OPS_SSH_SECRET_KEY never falls back to the admin password: generate a
+    # separate random secret when not provided.
+    if [ -z "${OPS_SSH_SECRET_KEY:-}" ]; then
+        OPS_SSH_SECRET_KEY="$(random_hex_secret)"
+    fi
     TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-${BOT_TOKEN:-}}"
     TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-${TG_CHAT_ID:-}}"
     TELEGRAM_BOT_CHAT_ID="${TELEGRAM_BOT_CHAT_ID:-$TELEGRAM_CHAT_ID}"
@@ -149,7 +177,7 @@ TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
 TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
 TELEGRAM_BOT_CHAT_ID=${TELEGRAM_BOT_CHAT_ID}
 TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-king_detective_bot}
-CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
+CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
 SERVER_ADDRESS=${SERVER_ADDRESS:-0.0.0.0}
 SERVER_PORT=${SERVER_PORT:-9527}
 KING_DETECTIVE_GITHUB_REPOSITORY=${KING_DETECTIVE_GITHUB_REPOSITORY:-tony-wang1990/Wang-Detective-2}
@@ -159,8 +187,8 @@ JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS_VALUE}
 EOF
     chmod 600 .env
     echo "  - .env 已生成"
-    if [ "$ADMIN_PASSWORD" = "admin123456" ]; then
-        echo "  - 警告: 当前仍使用默认密码，建议尽快修改 ADMIN_PASSWORD"
+    if [ -n "$GENERATED_ADMIN_PASSWORD" ]; then
+        echo "  - 已自动生成随机管理员密码（仅显示一次，请妥善保存）: ${ADMIN_PASSWORD}"
     fi
 else
     echo "  - .env 已存在，保留现有环境配置"

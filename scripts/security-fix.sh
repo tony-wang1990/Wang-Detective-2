@@ -28,6 +28,16 @@ if [ -z "$NEW_TOKEN" ]; then
     exit 1
 fi
 
+# No weak default: use the operator-provided password, or generate a random one.
+# The application refuses to start without a password, so this script must not
+# write a well-known default into .env.
+if [ -z "${ADMIN_PASSWORD:-${WEB_PASSWORD:-}}" ]; then
+    ADMIN_PASSWORD="$(openssl rand -hex 16 2>/dev/null || tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)"
+    echo "⚠️  未提供 ADMIN_PASSWORD，已自动生成随机密码（仅显示一次，请妥善保存）: ${ADMIN_PASSWORD}"
+else
+    ADMIN_PASSWORD="${ADMIN_PASSWORD:-${WEB_PASSWORD}}"
+fi
+
 # 创建.env文件
 echo ""
 echo "📝 创建 .env 文件..."
@@ -37,7 +47,7 @@ TELEGRAM_BOT_TOKEN=$NEW_TOKEN
 
 # Web Admin Credentials
 ADMIN_USERNAME=${ADMIN_USERNAME:-${WEB_ACCOUNT:-admin}}
-ADMIN_PASSWORD=${ADMIN_PASSWORD:-${WEB_PASSWORD:-admin123456}}
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
 
 EOF
 

@@ -83,6 +83,9 @@ keys/
 # Docker
 # ==========================
 .dockerignore
+# ... except the project .dockerignore itself, which must be tracked so that
+# `docker build` excludes the same files for everyone (added 2026-11-24).
+!.dockerignore
 
 # ==========================
 # OS Files

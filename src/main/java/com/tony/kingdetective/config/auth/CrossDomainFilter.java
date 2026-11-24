@@ -18,7 +18,10 @@ public class CrossDomainFilter implements WebMvcConfigurer {
     @Resource
     private AuthInterceptor authInterceptor;
 
-    @Value("${web.cors.allowed-origins:*}")
+    // Empty by default = same-origin only. CrossDomainFilter drops empty entries,
+    // so no cross-origin origin is allowed unless CORS_ALLOWED_ORIGINS is set
+    // explicitly (never use "*" in production).
+    @Value("${web.cors.allowed-origins:}")
     private String allowedOrigins;
 
     @Value("${clients.download-dir:/app/king-detective/deploy/downloads}")

@@ -39,7 +39,10 @@ public class AdminCredentialService {
     @Value("${web.account:admin}")
     private String defaultAccount;
 
-    @Value("${web.password:admin123456}")
+    // No built-in default password: web.password resolves from ADMIN_PASSWORD /
+    // WEB_PASSWORD (see application.yml). If it is blank, StartupCredentialValidator
+    // refuses to start the application, so this empty default is never usable.
+    @Value("${web.password:}")
     private String defaultPassword;
 
     public AdminCredentialService(IOciKvService kvService) {
@@ -54,7 +57,12 @@ public class AdminCredentialService {
         if (!StrUtil.equals(account, getAccount())) {
             return false;
         }
+        // Never accept a login when no password is configured at all: without this
+        // guard an empty stored password would match an empty login password.
         String stored = passwordValue();
+        if (StrUtil.isBlank(stored) || StrUtil.isBlank(password)) {
+            return false;
+        }
         if (isPasswordHash(stored)) {
             return verifyPassword(password, stored);
         }
@@ -77,6 +85,14 @@ public class AdminCredentialService {
                 && JWTUtil.verify(token, secret.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * Legacy detector: reports whether the password stored in the database is still the
+     * well-known weak default that shipped in versions before 2026-11-24. It is only used
+     * by SystemDiagnosticsService to warn existing deployments; new installs can never
+     * obtain that password because there is no longer any default (see
+     * StartupCredentialValidator). The literal below is a detection constant, not a
+     * configured default, and must not be reintroduced as one.
+     */
     public boolean isUsingDefaultCredential() {
         String storedPassword = passwordValue();
         return StrUtil.equals("admin", getAccount())

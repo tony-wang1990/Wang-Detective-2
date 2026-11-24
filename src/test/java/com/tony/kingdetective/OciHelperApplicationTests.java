@@ -34,7 +34,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "king-detective.startup.tasks-enabled=false",
         "king-detective.websocket.server-endpoint-exporter-enabled=false",
         "oci-cfg.key-dir-path=target/test-keys",
-        "clients.download-dir=target/test-client-downloads-${random.uuid}"
+        "clients.download-dir=target/test-client-downloads-${random.uuid}",
+        // Test-only credentials for StartupCredentialValidator (fail-fast guard):
+        // the full context refuses to start without an admin password and an SSH key.
+        "web.password=test-only-password-123",
+        "ops.ssh.secret-key=test-only-ssh-secret-1234567890"
 })
 class OciHelperApplicationTests {
 
@@ -167,7 +171,7 @@ class OciHelperApplicationTests {
         String oldToken = adminCredentialService.generateToken(Map.of("account", "admin"));
 
         adminCredentialService.updateCredential(
-                "admin123456",
+                "test-only-password-123",
                 "audit-admin",
                 "audit-password-123",
                 "audit-password-123"
@@ -179,8 +183,8 @@ class OciHelperApplicationTests {
             adminCredentialService.updateCredential(
                     "audit-password-123",
                     "admin",
-                    "admin123456",
-                    "admin123456"
+                    "test-only-password-123",
+                    "test-only-password-123"
             );
         }
     }
